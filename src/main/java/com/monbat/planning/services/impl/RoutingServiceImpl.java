@@ -102,7 +102,7 @@ public class RoutingServiceImpl implements RoutingService {
                     routingDto.setElectricity(createActivityType(electricityActivityTypeColumn, electricityUomColumn, electricityTimeColumn, row));
                     routingDto.setWater(createActivityType(waterActivityTypeColumn, waterUomColumn, waterTimeColumn, row));
 
-                    routingRepository.save(modelMapper.map(routingDto, Routing.class));
+                    routingRepository.save(this.modelMapper.map(routingDto, Routing.class));
                     progressMap.put(uploadId, (row.getRowNum() * 100) / (sheet.getLastRowNum() - 1));
                 }
             }

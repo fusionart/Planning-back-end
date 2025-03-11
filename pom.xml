@@ -28,7 +28,24 @@
 	</scm>
 	<properties>
 		<java.version>23</java.version>
+		<maven.compiler.source>${java.version}</maven.compiler.source>
+		<maven.compiler.target>${java.version}</maven.compiler.target>
+		<maven.compiler.testSource>${java.version}</maven.compiler.testSource>
+		<maven.compiler.testTarget>${java.version}</maven.compiler.testTarget>
 	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>com.sap.cloud.sdk</groupId>
+				<artifactId>sdk-bom</artifactId>
+				<version>5.17.0</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -105,18 +122,17 @@
 			<artifactId>poi</artifactId>
 			<version>5.4.0</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.apache.poi/poi-scratchpad -->
 		<dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi-scratchpad</artifactId>
 			<version>5.4.0</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.apache.poi/poi-ooxml -->
 		<dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi-ooxml</artifactId>
 			<version>5.4.0</version>
 		</dependency>
+
 		<dependency>
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
@@ -127,15 +143,58 @@
 			<artifactId>gson</artifactId>
 			<version>2.11.0</version>
 		</dependency>
-		<!-- https://mvnrepository.com/artifact/org.hibernate.orm/hibernate-core -->
+
 		<dependency>
 			<groupId>org.hibernate.orm</groupId>
 			<artifactId>hibernate-core</artifactId>
 			<version>6.6.5.Final</version>
 		</dependency>
+
+		<!-- SAP dependencies -->
+		<dependency>
+			<groupId>com.sap.cloud.sdk</groupId>
+			<artifactId>sdk-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.sap.cloud.sdk.datamodel</groupId>
+			<artifactId>odata-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.sap.cloud.sdk.datamodel</groupId>
+			<artifactId>odata-generator</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>jakarta.inject</groupId>
+			<artifactId>jakarta.inject-api</artifactId>
+			<version>2.0.1</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>3.8.1</version>
+					<configuration>
+						<source>${maven.compiler.source}</source>
+						<target>${maven.compiler.target}</target>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-pmd-plugin</artifactId>
+					<configuration>
+						<rulesets>
+							<ruleset>rulesets/java/maven-pmd-plugin-default.xml</ruleset>
+						</rulesets>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -161,6 +220,61 @@
 						</exclude>
 					</excludes>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>versions-maven-plugin</artifactId>
+				<version>2.8.1</version>
+			</plugin>
+
+			<plugin>
+				<groupId>com.sap.cloud.sdk.datamodel</groupId>
+<!--				<artifactId>odata-v4-generator-maven-plugin</artifactId>-->
+				<artifactId>odata-generator-maven-plugin</artifactId>
+				<!-- Please use the latest version here-->
+				<version>5.17.0</version>
+				<executions>
+					<execution>
+						<id>generate-consumption</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>generate</goal>
+						</goals>
+						<configuration>
+							<inputDirectory>${project.basedir}/edmx</inputDirectory>
+							<outputDirectory>${project.build.directory}/vdm</outputDirectory>
+							<deleteOutputDirectory>true</deleteOutputDirectory>
+							<packageName>com.monbat.vdm</packageName>
+							<defaultBasePath>odata/v4/</defaultBasePath>
+							<compileScope>COMPILE</compileScope>
+							<serviceMethodsPerEntitySet>true</serviceMethodsPerEntitySet>
+							<!-- (Optional) You can add a custom copyright header:
+                            <copyrightHeader>Copyright (c) this year, my company</copyrightHeader>
+
+                            Or use the SAP copyright header:
+                            <sapCopyrightHeader>true</sapCopyrightHeader>
+                            -->
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>3.0.0</version>
+				<executions>
+					<execution>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>add-source</goal>
+						</goals>
+						<configuration>
+							<sources>
+								<source>${project.build.directory}/vdm</source>
+							</sources>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>

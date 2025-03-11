@@ -6,6 +6,7 @@ import com.monbat.planning.models.entities.Routing;
 import com.monbat.planning.models.other.ReadinessByDate;
 import com.monbat.planning.models.other.ReadinessByWeek;
 import com.monbat.planning.models.other.ReadinessDetail;
+import com.monbat.planning.models.other.ReadinessDetailWithDate;
 import com.monbat.planning.services.ProductionVersionService;
 import com.monbat.planning.services.ReadinessService;
 import com.monbat.planning.services.RoutingService;
@@ -48,28 +49,24 @@ public class CalculatePlan10sService {
 
                     List<Date> allReadinessDatesByWeek = getDistinctReadinessDates(allReadinessByWeek);
 
-                    List<ReadinessByDate> readinessByDateList = new ArrayList<>();
+                    List<ReadinessDetailWithDate> readinessDetailsList = new ArrayList<>();
                     for (Date readinessDate : allReadinessDatesByWeek) {
                         List<Readiness> filterByDate = allReadinessByWeek.stream()
                                 .filter(object -> object.getDateOfReadiness().equals(readinessDate))
                                 .toList();
 
-                        List<ReadinessDetail> readinessDetailsList = new ArrayList<>();
                         for (Readiness readiness : filterByDate) {
                             ReadinessDetail readinessDetail = this.modelMapper.map(readiness, ReadinessDetail.class);
                             readinessDetail.setWorkCenter(getWorkCenter(readiness.getMaterial()));
-                            readinessDetailsList.add(readinessDetail);
+                            ReadinessDetailWithDate readinessDetailWithDate =
+                                    new ReadinessDetailWithDate(readinessDate, readinessDetail);
+                            readinessDetailsList.add(readinessDetailWithDate);
                         }
-
-                        ReadinessByDate readinessByDate = new ReadinessByDate();
-                        readinessByDate.put(readinessDate, readinessDetailsList);
-                        readinessByDateList.add(readinessByDate);
-
                         currentEntryCounter++;
                     }
 
                     ReadinessByWeek readinessByWeek = new ReadinessByWeek();
-                    readinessByWeek.put(readinessWeek, readinessByDateList);
+                    readinessByWeek.put(readinessWeek, readinessDetailsList);
                     readinessByWeekList.add(readinessByWeek);
                 }
             }

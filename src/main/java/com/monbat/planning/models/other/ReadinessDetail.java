@@ -5,11 +5,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.io.Serializable;
+
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class ReadinessDetail {
+public class ReadinessDetail implements Serializable {
     private Integer salesDocument;
     private String soldToParty;
     private String customerName;
