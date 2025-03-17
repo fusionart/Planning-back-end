@@ -25,6 +25,9 @@ public class ImportFileController {
     private ReadinessService readinessService;
     @Autowired
     private RoutingService routingService;
+    @Autowired
+    private BatteryQuantityService batteryQuantityService;
+
 
     @PostMapping("/upload")
     public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file,
@@ -46,6 +49,9 @@ public class ImportFileController {
                 break;
             case ROUTING:
                 new Thread(() -> this.routingService.startImportRouting(theFile, uploadId)).start();
+                break;
+            case QUANTITIES:
+                new Thread(() -> this.batteryQuantityService.startBatteryQuantity(theFile, uploadId)).start();
                 break;
             default:
                 // code block
@@ -76,6 +82,10 @@ public class ImportFileController {
             }
             case ROUTING -> {
                 progress = this.routingService.getProgress(uploadId);
+                yield ResponseEntity.ok(progress);
+            }
+            case QUANTITIES -> {
+                progress = this.batteryQuantityService.getProgress(uploadId);
                 yield ResponseEntity.ok(progress);
             }
             default -> null;
