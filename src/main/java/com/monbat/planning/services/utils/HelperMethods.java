@@ -1,13 +1,13 @@
 package com.monbat.planning.services.utils;
 
 import java.text.DateFormat;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class HelperMethods {
     public static Boolean checkIsNumber(String s) {
@@ -115,5 +115,28 @@ public class HelperMethods {
             }
         }
         return localTime;
+    }
+
+    public static LocalDate convertEpochDateToLocalDate(String epochMillis){
+        // Regex pattern
+        String regex = "\\/Date\\((\\d+)\\)\\/";
+
+        // Compile the pattern
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(epochMillis);
+
+        if (matcher.find()) {
+            return Instant.ofEpochMilli(Long.parseLong(matcher.group(1)))
+                    .atZone(ZoneId.systemDefault()) // Change to desired timezone
+                    .toLocalDate();
+        } else {
+            return null;
+        }
+    }
+
+    public static LocalTime convertISO8601ToLocalTime(String isoTime){
+        Duration duration = Duration.parse(isoTime);
+
+        return LocalTime.MIDNIGHT.plus(duration);
     }
 }
