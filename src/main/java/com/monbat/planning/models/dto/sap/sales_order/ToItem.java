@@ -13,4 +13,5 @@ public class ToItem {
     private String material;
     private Double requestedQuantity;
     private String requestedQuantityUnit;
+    private String SDProcessStatus;
 }

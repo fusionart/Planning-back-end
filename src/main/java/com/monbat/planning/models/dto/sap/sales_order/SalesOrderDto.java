@@ -16,5 +16,6 @@ public class SalesOrderDto {
     private String salesOrderNumber;
     private String soldToParty;
     private LocalDateTime requestedDeliveryDate;
+    private String requestedDeliveryWeek;
     private List<ToItem> toItem;
 }

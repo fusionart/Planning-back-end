@@ -3,6 +3,7 @@ package com.monbat.planning.controllers.sales_order;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.monbat.planning.services.MapToSalesOrderDto;
 import com.monbat.vdm.namespaces.apisalesordersrv.SalesOrderHeader;
 import com.monbat.vdm.namespaces.apisalesordersrv.SalesOrderItem;
 import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultDestination;
@@ -15,6 +16,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +35,9 @@ import static com.monbat.planning.controllers.constants.SapApiConstants.*;
 @RestController
 @RequestMapping("/api/sap")
 public class SalesOrderController implements Serializable {
+    @Autowired
+    MapToSalesOrderDto mapToSalesOrderDto;
+
     private static final Logger logger = LoggerFactory.getLogger(SalesOrderController.class);
 
     private final ObjectMapper objectMapper;
@@ -60,9 +65,10 @@ public class SalesOrderController implements Serializable {
 
             URI uri = new URIBuilder(SALES_ORDER_URL + SALES_ORDER_MAIN_GET)
                     .addParameter("$format", "json")
-                    .addParameter("$top", "20")
+//                    .addParameter("$top", "20")
                     .addParameter("$expand", "to_Item")
-                    .addParameter("$filter", "OverallDeliveryStatus eq 'A'")
+                    .addParameter("$filter", "OverallTotalDeliveryStatus eq 'A' and " +
+                            "RequestedDeliveryDate gt datetime'2025-01-01T00:00:00'")
                     .addParameter("sap-client", "200")
                     .build();
 
@@ -118,7 +124,7 @@ public class SalesOrderController implements Serializable {
                     }
                 }
 
-                return ResponseEntity.ok(ordersList);
+                return ResponseEntity.ok(mapToSalesOrderDto.salesOrderList(ordersList));
             }
         } catch (Exception e) {
             logger.error("Error in getSalesOrders: ", e);
