@@ -163,6 +163,11 @@
 			<groupId>com.sap.cloud.sdk.datamodel</groupId>
 			<artifactId>odata-generator</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<version>1.18.0</version>
+		</dependency>
 
 	</dependencies>
 
@@ -237,6 +242,7 @@
 						<configuration>
 							<inputDirectory>${project.basedir}/edmx</inputDirectory>
 							<outputDirectory>${project.build.directory}/vdm</outputDirectory>
+<!--							<outputDirectory>${project.basedir}/src/main/java</outputDirectory>-->
 							<deleteOutputDirectory>true</deleteOutputDirectory>
 							<packageName>com.monbat.vdm</packageName>
 							<defaultBasePath>odata/v4/</defaultBasePath>

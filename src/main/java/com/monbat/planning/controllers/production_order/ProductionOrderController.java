@@ -1,8 +1,8 @@
 package com.monbat.planning.controllers.production_order;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.monbat.planning.models.dto.sap.production_order.ProductionOrderDto;
-import com.monbat.planning.models.dto.sap.production_order.ProductionOrderWrapper;
+import com.monbat.planning.models.production_order.ProductionOrderDto;
+import com.monbat.planning.models.production_order.ProductionOrderWrapper;
 import com.monbat.planning.services.MapToProductionOrderDto;
 import com.monbat.vdm.namespaces.opapiproductionorder2srv0001.ProductionOrderComponents;
 import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultDestination;
@@ -10,6 +10,7 @@ import com.sap.cloud.sdk.cloudplatform.connectivity.HttpClientAccessor;
 import com.sap.cloud.sdk.cloudplatform.connectivity.HttpDestination;
 import com.sap.cloud.sdk.cloudplatform.connectivity.exception.DestinationAccessException;
 import com.sap.cloud.sdk.datamodel.odata.client.exception.ODataException;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
@@ -22,11 +23,13 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.Serial;
 import java.io.Serializable;
 import java.net.URI;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static com.monbat.planning.controllers.constants.SapApiConstants.*;
@@ -42,17 +45,20 @@ public class ProductionOrderController implements Serializable {
     private static final Logger logger = LoggerFactory.getLogger(ProductionOrderController.class);
 
     @RequestMapping( value = "/getProductionOrders", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE )
-    public ResponseEntity<?> getProductionOrders() {
-        // DESTINATION 3:  Destination to a SAP S/4HANA Cloud (public edition) tenant
-        // Uncomment this section to test with actual SAP S/4HANA Cloud
+    public ResponseEntity<?> getProductionOrders(@RequestParam String username,
+                                                @RequestParam String password,
+                                                @RequestParam LocalDateTime reqDelDateBegin,
+                                                @RequestParam LocalDateTime reqDelDateEnd) {
+
+        Base64 base64 = new Base64();
         try {
             HttpDestination destination = DefaultDestination.builder()
                     .property("Name", "mydestination")
                     .property("URL", PRODUCTION_ORDER_URL)
                     .property("Type", "HTTP")
                     .property("Authentication", "BasicAuthentication")
-                    .property("User", USER_NAME)
-                    .property("Password", PASSWORD)
+                    .property("User", new String(base64.decode(username.getBytes())))
+                    .property("Password", new String(base64.decode(password.getBytes())))
                     .property("trustAll", "true")
                     .build().asHttp();
 
@@ -63,11 +69,8 @@ public class ProductionOrderController implements Serializable {
                     .addParameter("$format", "json")
                     .addParameter("$top", "500")
                     .addParameter("$expand", "to_ProductionOrderOperation")
-                    .addParameter("$filter", "ProductionPlant eq '1000' and " +
-                            "MfgOrderScheduledStartDate gt datetime'2025-02-01T00:00:00' and " +
-                            "OrderIsReleased ne 'X' and " +
-                            "ProductionSupervisor eq 'Z01'")
-                    .addParameter("sap-client", "200")
+                    .addParameter("$filter", "MfgOrderScheduledStartDate gt datetime'" + reqDelDateBegin + "'")
+                    .addParameter("sap-client", SAP_CLIENT)
                     .build();
 
             // Step 3: Execute the Request

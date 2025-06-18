@@ -1,11 +1,9 @@
 package com.monbat.planning.services.impl;
 
-import com.monbat.planning.models.dto.sap.production_order.ProductionOrderDto;
+import com.monbat.planning.models.production_order.ProductionOrderDto;
 import com.monbat.planning.services.MapToProductionOrderDto;
-import com.monbat.planning.services.MaterialService;
 import com.monbat.planning.services.utils.HelperMethods;
 import com.monbat.vdm.namespaces.opapiproductionorder2srv0001.ProductionOrderComponents;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -15,8 +13,6 @@ import java.util.Map;
 
 @Service
 public class MapToProductionOrderDtoImpl implements MapToProductionOrderDto {
-    @Autowired
-    private MaterialService materialService;
 
     @Override
     public List<ProductionOrderDto> productionOrderList(List<ProductionOrderComponents> productionOrderComponentsList) {
@@ -27,7 +23,8 @@ public class MapToProductionOrderDtoImpl implements MapToProductionOrderDto {
 
             ProductionOrderDto productionOrderDto = new ProductionOrderDto();
             productionOrderDto.setMaterial(productionOrderComponent.getMaterial());
-            productionOrderDto.setMaterialDescription(this.materialService.getMaterialByCode(productionOrderComponent.getMaterial()).getDescription());
+            //productionOrderDto.setMaterialDescription(this.materialService.getMaterialByCode
+            // (productionOrderComponent.getMaterial()).getDescription());
             productionOrderDto.setProductionOrder(productionOrderComponent.getProductionOrder());
             productionOrderDto.setProductionPlant(productionOrderComponent.getProductionPlant());
 
@@ -46,6 +43,7 @@ public class MapToProductionOrderDtoImpl implements MapToProductionOrderDto {
             productionOrderDto.setProductionUnit(customFields.get("ProductionUnit").toString());
             productionOrderDto.setTotalQuantity(Double.parseDouble(customFields.get("TotalQuantity").toString()));
             productionOrderDto.setMfgOrderConfirmedYieldQty(Double.parseDouble(customFields.get("MfgOrderConfirmedYieldQty").toString()));
+            productionOrderDto.setSalesOrder(customFields.get("SalesOrder").toString());
 
             LinkedHashMap<String, Object> customFieldsProdOperations =
                     (LinkedHashMap<String, Object>) productionOrderComponent.getCustomFields().get(

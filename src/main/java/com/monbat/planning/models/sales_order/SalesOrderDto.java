@@ -1,4 +1,4 @@
-package com.monbat.planning.models.dto.sap.sales_order;
+package com.monbat.planning.models.sales_order;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -17,5 +17,6 @@ public class SalesOrderDto {
     private String soldToParty;
     private LocalDateTime requestedDeliveryDate;
     private String requestedDeliveryWeek;
+    private Boolean completeDelivery;
     private List<ToItem> toItem;
 }

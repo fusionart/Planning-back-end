@@ -1,14 +1,18 @@
 package com.monbat.planning.controllers.sales_order;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.monbat.planning.services.MapToSalesOrderDto;
-import com.monbat.vdm.namespaces.apisalesordersrv.SalesOrderHeader;
-import com.monbat.vdm.namespaces.apisalesordersrv.SalesOrderItem;
+import com.monbat.planning.services.utils.ODataModule;
+import com.monbat.vdm.namespaces.opapisalesordersrv0001.SalesOrderHeader;
+import com.monbat.vdm.namespaces.opapisalesordersrv0001.SalesOrderItem;
 import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultDestination;
 import com.sap.cloud.sdk.cloudplatform.connectivity.HttpClientAccessor;
 import com.sap.cloud.sdk.cloudplatform.connectivity.HttpDestination;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
@@ -22,12 +26,15 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.net.URI;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static com.monbat.planning.controllers.constants.SapApiConstants.*;
@@ -42,22 +49,25 @@ public class SalesOrderController implements Serializable {
 
     private final ObjectMapper objectMapper;
 
-    public SalesOrderController() {
-        this.objectMapper = new ObjectMapper();
-        this.objectMapper.addMixIn(SalesOrderHeader.class, SalesOrderHeaderMixIn.class);
-        this.objectMapper.addMixIn(SalesOrderItem.class, SalesOrderItemMixIn.class);
+    public SalesOrderController(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
     }
 
+
     @RequestMapping(value = "/getSalesOrders", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> getSalesOrders() {
+    public ResponseEntity<?> getSalesOrders(@RequestParam String username,
+                                            @RequestParam String password,
+                                            @RequestParam LocalDateTime reqDelDateBegin,
+                                            @RequestParam LocalDateTime reqDelDateEnd) {
+        Base64 base64 = new Base64();
         try {
             HttpDestination destination = DefaultDestination.builder()
                     .property("Name", "mydestination")
                     .property("URL", SALES_ORDER_URL)
                     .property("Type", "HTTP")
                     .property("Authentication", "BasicAuthentication")
-                    .property("User", USER_NAME)
-                    .property("Password", PASSWORD)
+                    .property("User", new String(base64.decode(username.getBytes())))
+                    .property("Password", new String(base64.decode(password.getBytes())))
                     .property("trustAll", "true")
                     .build().asHttp();
 
@@ -68,8 +78,9 @@ public class SalesOrderController implements Serializable {
 //                    .addParameter("$top", "20")
                     .addParameter("$expand", "to_Item")
                     .addParameter("$filter", "OverallTotalDeliveryStatus eq 'A' and " +
-                            "RequestedDeliveryDate gt datetime'2025-01-01T00:00:00'")
-                    .addParameter("sap-client", "200")
+                            "RequestedDeliveryDate gt datetime'" + reqDelDateBegin + "' and " +
+                            "RequestedDeliveryDate lt datetime'"+ reqDelDateEnd + "'")
+                    .addParameter("sap-client", SAP_CLIENT)
                     .build();
 
             HttpGet request = new HttpGet(uri);
@@ -86,41 +97,53 @@ public class SalesOrderController implements Serializable {
                 JsonNode resultsNode = rootNode.path("d").path("results");
 
                 List<SalesOrderHeader> ordersList = new ArrayList<>();
+                objectMapper.registerModule(new ODataModule());
+                objectMapper.registerModule(new JavaTimeModule());
+                objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
                 for (JsonNode headerNode : resultsNode) {
-                    // Handle to_Item if it has results
-                    if (headerNode.has("to_Item") && headerNode.get("to_Item").has("results")) {
-                        JsonNode itemsNode = headerNode.get("to_Item").get("results");
-                        List<SalesOrderItem> items = objectMapper.readValue(
-                                objectMapper.treeAsTokens(itemsNode),
-                                objectMapper.getTypeFactory().constructCollectionType(List.class, SalesOrderItem.class)
-                        );
-
-                        // Create a modified header node without to_Item
+                    try {
+                        // Create a copy of the header node without navigation properties
                         ObjectNode modifiedHeaderNode = objectMapper.createObjectNode();
                         headerNode.fields().forEachRemaining(field -> {
-                            if (!field.getKey().equals("to_Item")) {
+                            if (!field.getKey().startsWith("to_")) {
                                 modifiedHeaderNode.set(field.getKey(), field.getValue());
                             }
                         });
 
-                        // Deserialize the header
+                        // Deserialize the main header first
                         SalesOrderHeader header = objectMapper.treeToValue(modifiedHeaderNode, SalesOrderHeader.class);
 
-                        // Set items using reflection
-                        try {
-                            Field toItemField = SalesOrderHeader.class.getDeclaredField("toItem");
-                            toItemField.setAccessible(true);
-                            toItemField.set(header, items);
-                        } catch (Exception e) {
-                            logger.warn("Failed to set toItem via reflection", e);
+                        // Process to_Item if present
+                        if (headerNode.has("to_Item")) {
+                            JsonNode itemsNode = headerNode.get("to_Item");
+
+                            if (itemsNode.has("results")) {
+                                // More robust deserialization of items
+                                List<SalesOrderItem> items = Arrays.asList(objectMapper.treeToValue(
+                                        itemsNode.get("results"),
+                                        SalesOrderItem[].class
+                                ));
+
+                                // Set items using reflection (if no setter available)
+                                try {
+                                    Field toItemField = SalesOrderHeader.class.getDeclaredField("toItem");
+                                    toItemField.setAccessible(true);
+                                    toItemField.set(header, items);
+                                } catch (Exception e) {
+                                    logger.warn("Failed to set toItem via reflection", e);
+                                }
+                            }
+                            // Optional: Handle deferred case
+                            else if (itemsNode.has("__deferred")) {
+                                logger.debug("Deferred items found, URI: {}", itemsNode.get("__deferred").get("uri"));
+                            }
                         }
 
                         ordersList.add(header);
-                    } else {
-                        // If no items, just deserialize normally
-                        SalesOrderHeader header = objectMapper.treeToValue(headerNode, SalesOrderHeader.class);
-                        ordersList.add(header);
+                    } catch (Exception e) {
+                        logger.error("Error processing order header", e);
+                        // Optionally add error handling or continue to next item
                     }
                 }
 

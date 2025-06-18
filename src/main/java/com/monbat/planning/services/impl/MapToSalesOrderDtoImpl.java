@@ -1,10 +1,10 @@
 package com.monbat.planning.services.impl;
 
-import com.monbat.planning.models.dto.sap.sales_order.SalesOrderDto;
-import com.monbat.planning.models.dto.sap.sales_order.ToItem;
+import com.monbat.planning.models.sales_order.SalesOrderDto;
+import com.monbat.planning.models.sales_order.ToItem;
 import com.monbat.planning.services.MapToSalesOrderDto;
-import com.monbat.vdm.namespaces.apisalesordersrv.SalesOrderHeader;
-import com.monbat.vdm.namespaces.apisalesordersrv.SalesOrderItem;
+import com.monbat.vdm.namespaces.opapisalesordersrv0001.SalesOrderHeader;
+import com.monbat.vdm.namespaces.opapisalesordersrv0001.SalesOrderItem;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +24,8 @@ public class MapToSalesOrderDtoImpl implements MapToSalesOrderDto {
             salesOrderDto.setSalesOrderNumber(salesOrderHeader.getSalesOrder());
             salesOrderDto.setSoldToParty(salesOrderHeader.getSoldtoParty());
             salesOrderDto.setRequestedDeliveryDate(salesOrderHeader.getRequestedDeliveryDate());
+            salesOrderDto.setCompleteDelivery(salesOrderHeader.getCompleteDelivery());
+            assert salesOrderHeader.getRequestedDeliveryDate() != null;
             salesOrderDto.setRequestedDeliveryWeek(salesOrderHeader.getRequestedDeliveryDate().get(WeekFields.of(Locale.getDefault()).weekOfYear()) + "/" + salesOrderHeader.getRequestedDeliveryDate().getYear());
             List<ToItem> toItemList = getToItems(salesOrderHeader);
             salesOrderDto.setToItem(toItemList);

@@ -3,22 +3,18 @@ package com.monbat.planning.services.calculations;
 import com.monbat.planning.models.entities.ProductionVersion;
 import com.monbat.planning.models.entities.Readiness;
 import com.monbat.planning.models.entities.Routing;
-import com.monbat.planning.models.other.ReadinessByDate;
 import com.monbat.planning.models.other.ReadinessByWeek;
 import com.monbat.planning.models.other.ReadinessDetail;
 import com.monbat.planning.models.other.ReadinessDetailWithDate;
 import com.monbat.planning.services.ProductionVersionService;
 import com.monbat.planning.services.ReadinessService;
 import com.monbat.planning.services.RoutingService;
-import com.monbat.planning.services.utils.ShowAlert;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static com.monbat.planning.utils.constants.Messages.MISSING_READINESS;
 
 @Service
 public class CalculatePlan10sService {
@@ -36,7 +32,7 @@ public class CalculatePlan10sService {
     private List<ReadinessByWeek> readinessByWeekList;
 
     private void loadDataFromDB() {
-        List<String> allReadinessWeeks = readinessService.getDistinctReadinessWeek();
+        List<String> allReadinessWeeks = this.readinessService.getDistinctReadinessWeek();
         List<Readiness> allReadinessByWeek;
         readinessByWeekList = new ArrayList<>();
 

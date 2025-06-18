@@ -1,4 +1,4 @@
-package com.monbat.planning.models.dto.sap.production_order;
+package com.monbat.planning.models.production_order;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,4 +28,5 @@ public class ProductionOrderDto {
     private String productionUnit;
     private Double totalQuantity;
     private Double mfgOrderConfirmedYieldQty;
+    private String salesOrder;
 }

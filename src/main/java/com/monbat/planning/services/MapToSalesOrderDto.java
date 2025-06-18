@@ -1,7 +1,7 @@
 package com.monbat.planning.services;
 
-import com.monbat.planning.models.dto.sap.sales_order.SalesOrderDto;
-import com.monbat.vdm.namespaces.apisalesordersrv.SalesOrderHeader;
+import com.monbat.planning.models.sales_order.SalesOrderDto;
+import com.monbat.vdm.namespaces.opapisalesordersrv0001.SalesOrderHeader;
 
 import java.util.List;
 

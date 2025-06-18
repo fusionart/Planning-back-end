@@ -1,4 +1,4 @@
-package com.monbat.planning.models.dto.sap.production_order;
+package com.monbat.planning.models.production_order;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.monbat.vdm.namespaces.opapiproductionorder2srv0001.ProductionOrderComponents;
