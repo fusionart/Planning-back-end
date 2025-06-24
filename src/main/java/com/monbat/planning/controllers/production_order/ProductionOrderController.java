@@ -67,7 +67,7 @@ public class ProductionOrderController implements Serializable {
 
             URI uri = new URIBuilder(PRODUCTION_ORDER_URL + PRODUCTION_ORDER_MAIN_GET)
                     .addParameter("$format", "json")
-                    .addParameter("$top", "500")
+//                    .addParameter("$top", "500")
                     .addParameter("$expand", "to_ProductionOrderOperation")
                     .addParameter("$filter", "MfgOrderScheduledStartDate gt datetime'" + reqDelDateBegin + "'")
                     .addParameter("sap-client", SAP_CLIENT)

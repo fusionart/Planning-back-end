@@ -1,10 +1,9 @@
-package com.monbat.planning.controllers.planned_order;
+package com.monbat.planning.controllers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.monbat.planning.controllers.sales_order.SalesOrderController;
-import com.monbat.planning.services.MapToPlannedOrderDto;
-import com.monbat.vdm.namespaces.opapiplannedorderssrv0001.PlannedOrder;
+import com.monbat.planning.services.MapToSalesOrderDto;
+import com.monbat.vdm.namespaces.opapimaterialstocksrv.MaterialStock;
 import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultDestination;
 import com.sap.cloud.sdk.cloudplatform.connectivity.HttpClientAccessor;
 import com.sap.cloud.sdk.cloudplatform.connectivity.HttpDestination;
@@ -27,7 +26,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.Serializable;
 import java.net.URI;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,30 +33,29 @@ import static com.monbat.planning.controllers.constants.SapApiConstants.*;
 
 @RestController
 @RequestMapping("/api/sap")
-public class PlannedOrderController implements Serializable {
+public class MaterialStockController implements Serializable {
     @Autowired
-    MapToPlannedOrderDto mapToPlannedOrderDto;
+    MapToSalesOrderDto mapToSalesOrderDto;
 
-    private static final Logger logger = LoggerFactory.getLogger(SalesOrderController.class);
+    private static final Logger logger = LoggerFactory.getLogger(MaterialStockController.class);
 
     private final ObjectMapper objectMapper;
 
-    public PlannedOrderController(ObjectMapper objectMapper) {
+    public MaterialStockController(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
 
-    @RequestMapping(value = "/getPlannedOrders", method = RequestMethod.GET, produces =
+    @RequestMapping(value = "/getMaterialStock", method = RequestMethod.GET, produces =
             MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> getPlannedOrders(@RequestParam String username,
+    public ResponseEntity<?> getMaterialStock(@RequestParam String username,
                                             @RequestParam String password,
-                                            @RequestParam LocalDateTime reqDelDateBegin,
-                                            @RequestParam LocalDateTime reqDelDateEnd) {
+                                            @RequestParam String material) {
         Base64 base64 = new Base64();
         try {
             HttpDestination destination = DefaultDestination.builder()
                     .property("Name", "mydestination")
-                    .property("URL", PLANNED_ORDER_URL)
+                    .property("URL", MATERIAL_STOCK_URL)
                     .property("Type", "HTTP")
                     .property("Authentication", "BasicAuthentication")
                     .property("User", new String(base64.decode(username.getBytes())))
@@ -68,11 +65,8 @@ public class PlannedOrderController implements Serializable {
 
             CloseableHttpClient httpClient = (CloseableHttpClient) HttpClientAccessor.getHttpClient(destination);
 
-            URI uri = new URIBuilder(PLANNED_ORDER_URL + PLANNED_ORDER_MAIN_GET)
+            URI uri = new URIBuilder(MATERIAL_STOCK_URL + String.format(MATERIAL_STOCK_ITEM_GET, material))
                     .addParameter("$format", "json")
-//                    .addParameter("$top", "20")
-                    .addParameter("$filter", "PlndOrderPlannedStartDate gt datetime'" + reqDelDateBegin + "' and " +
-                            "PlndOrderPlannedEndDate lt datetime'"+ reqDelDateEnd + "'")
                     .addParameter("sap-client", SAP_CLIENT)
                     .build();
 
@@ -89,19 +83,26 @@ public class PlannedOrderController implements Serializable {
                 JsonNode rootNode = objectMapper.readTree(jsonResponse);
                 JsonNode resultsNode = rootNode.path("d").path("results");
 
-                List<PlannedOrder> ordersList = new ArrayList<>();
+                List<MaterialStock> materialStockList = new ArrayList<>();
 
                 for (JsonNode headerNode : resultsNode) {
-
-                    PlannedOrder header = objectMapper.treeToValue(headerNode, PlannedOrder.class);
-                        ordersList.add(header);
+                    MaterialStock header = objectMapper.treeToValue(headerNode, MaterialStock.class);
+                    materialStockList.add(header);
                 }
 
-                return ResponseEntity.ok(this.mapToPlannedOrderDto.getPlannedOrderList(ordersList));
+                return ResponseEntity.ok(sumQuantity(materialStockList));
             }
         } catch (Exception e) {
             logger.error("Error in getSalesOrders: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: " + e.getMessage());
         }
+    }
+
+    private Double sumQuantity(List<MaterialStock> materialStockList) {
+        double total = 0;
+        for (MaterialStock materialStock : materialStockList){
+            total += materialStock.getMatlWrhsStkQtyInMatlBaseUnit().doubleValue();
+        }
+        return total;
     }
 }
