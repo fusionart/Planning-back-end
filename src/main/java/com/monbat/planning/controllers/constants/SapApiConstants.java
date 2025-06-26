@@ -21,6 +21,7 @@ public class SapApiConstants {
     public static final String MATERIAL_STOCK_URL = "https://vhmotds4ci.sap.monbat" +
             ".com:44300/sap/opu/odata/sap/API_MATERIAL_STOCK_SRV/";
     public static final String MATERIAL_STOCK_ITEM_GET = "A_MaterialStock('%s')/to_MatlStkInAcctMod";
+    public static final String MATERIAL_STOCK_ITEM_GET1 = "A_MatlStkInAcctMod";
 
     //General
     public static final String TOP = "?$top=";

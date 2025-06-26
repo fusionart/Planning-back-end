@@ -2,7 +2,6 @@ package com.monbat.planning.controllers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.monbat.planning.services.MapToSalesOrderDto;
 import com.monbat.vdm.namespaces.opapimaterialstocksrv.MaterialStock;
 import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultDestination;
 import com.sap.cloud.sdk.cloudplatform.connectivity.HttpClientAccessor;
@@ -15,7 +14,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -34,9 +32,6 @@ import static com.monbat.planning.controllers.constants.SapApiConstants.*;
 @RestController
 @RequestMapping("/api/sap")
 public class MaterialStockController implements Serializable {
-    @Autowired
-    MapToSalesOrderDto mapToSalesOrderDto;
-
     private static final Logger logger = LoggerFactory.getLogger(MaterialStockController.class);
 
     private final ObjectMapper objectMapper;
@@ -98,7 +93,7 @@ public class MaterialStockController implements Serializable {
         }
     }
 
-    private Double sumQuantity(List<MaterialStock> materialStockList) {
+    private double sumQuantity(List<MaterialStock> materialStockList) {
         double total = 0;
         for (MaterialStock materialStock : materialStockList){
             total += materialStock.getMatlWrhsStkQtyInMatlBaseUnit().doubleValue();

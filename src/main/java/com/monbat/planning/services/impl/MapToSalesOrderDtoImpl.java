@@ -5,6 +5,7 @@ import com.monbat.planning.models.sales_order.ToItem;
 import com.monbat.planning.services.MapToSalesOrderDto;
 import com.monbat.vdm.namespaces.opapisalesordersrv0001.SalesOrderHeader;
 import com.monbat.vdm.namespaces.opapisalesordersrv0001.SalesOrderItem;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 
@@ -12,6 +13,7 @@ import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 @Service
 public class MapToSalesOrderDtoImpl implements MapToSalesOrderDto {
@@ -28,6 +30,10 @@ public class MapToSalesOrderDtoImpl implements MapToSalesOrderDto {
             assert salesOrderHeader.getRequestedDeliveryDate() != null;
             salesOrderDto.setRequestedDeliveryWeek(salesOrderHeader.getRequestedDeliveryDate().get(WeekFields.of(Locale.getDefault()).weekOfYear()) + "/" + salesOrderHeader.getRequestedDeliveryDate().getYear());
             List<ToItem> toItemList = getToItems(salesOrderHeader);
+            if (toItemList.isEmpty()){
+                continue;
+            }
+
             salesOrderDto.setToItem(toItemList);
             salesOrders.add(salesOrderDto);
         }
@@ -38,12 +44,14 @@ public class MapToSalesOrderDtoImpl implements MapToSalesOrderDto {
     private static List<ToItem> getToItems(SalesOrderHeader salesOrderHeader) {
         List<ToItem> toItemList = new ArrayList<>();
         for (SalesOrderItem salesOrderItem : salesOrderHeader.getItemOrFetch()){
-            ToItem toItem = new ToItem();
-            toItem.setMaterial(salesOrderItem.getMaterial());
-            toItem.setRequestedQuantity(salesOrderItem.getRequestedQuantity().doubleValue());
-            toItem.setRequestedQuantityUnit(salesOrderItem.getRequestedQtyUnit());
-            toItem.setSDProcessStatus(salesOrderItem.getOverallStatus());
-            toItemList.add(toItem);
+            if (Objects.equals(StringUtils.left(salesOrderItem.getMaterial(), 2), "10")){
+                ToItem toItem = new ToItem();
+                toItem.setMaterial(salesOrderItem.getMaterial());
+                toItem.setRequestedQuantity(salesOrderItem.getRequestedQuantity().doubleValue());
+                toItem.setRequestedQuantityUnit(salesOrderItem.getRequestedQtyUnit());
+                toItem.setSDProcessStatus(salesOrderItem.getOverallStatus());
+                toItemList.add(toItem);
+            }
         }
         return toItemList;
     }
