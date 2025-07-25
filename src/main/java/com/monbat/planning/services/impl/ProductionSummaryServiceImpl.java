@@ -80,7 +80,7 @@ public class ProductionSummaryServiceImpl implements ProductionSummaryService {
                 Material material = materialList.stream().filter(item -> item.getMaterial().equals(row.getCell(materialColumn).getStringCellValue())).findFirst().orElse(null);
 
                 if (material != null) {
-                    productionSummaryDto.setDeliveredQuantity(row.getCell(deliverQuantityColumn).getNumericCellValue() * material.getKilosForEach());
+                    productionSummaryDto.setDeliveredQuantity(row.getCell(deliverQuantityColumn).getNumericCellValue() * material.getNetWeight());
                 } else {
                     productionSummaryDto.setDeliveredQuantity(row.getCell(deliverQuantityColumn).getNumericCellValue());
                 }

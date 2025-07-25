@@ -48,7 +48,7 @@ public class MaterialServiceImpl implements MaterialService {
             int externalMaterialGroupColumn = FindColumnIndexFromExcelRow.findColumnIndex(headerRow, EXTERNAL_MATERIAL_GROUP);
 //            int leadTimeOffsetColumn = FindColumnIndexFromExcelRow.findColumnIndex(headerRow, LEAD_TIME_OFFSET);
 //            int curringTimeColumn = FindColumnIndexFromExcelRow.findColumnIndex(headerRow, CURRING);
-            int kilosForEachColumn = FindColumnIndexFromExcelRow.findColumnIndex(headerRow, KILOS_FOR_EACH);
+            int kilosForEachColumn = FindColumnIndexFromExcelRow.findColumnIndex(headerRow, NET_WEIGHT);
 
             int processedRows = 0;
             for (Row row : sheet) {
@@ -58,7 +58,7 @@ public class MaterialServiceImpl implements MaterialService {
 
                 MaterialDto materialDto = new MaterialDto();
                 materialDto.setMaterial(row.getCell(materialColumn).getStringCellValue());
-                materialDto.setPlant(Integer.parseInt(row.getCell(productionPlantColumn).getStringCellValue()));
+                materialDto.setPlant((int)row.getCell(productionPlantColumn).getNumericCellValue());
                 materialDto.setDescription(row.getCell(materialDescriptionColumn).getStringCellValue());
                 materialDto.setMaterialType(row.getCell(materialTypeColumn).getStringCellValue());
                 materialDto.setMaterialGroup(row.getCell(materialGroupColumn).getStringCellValue());
@@ -66,7 +66,7 @@ public class MaterialServiceImpl implements MaterialService {
                 materialDto.setExternalMaterialGroup(row.getCell(externalMaterialGroupColumn).getStringCellValue());
                 materialDto.setLeadTimeOffset(0);
                 materialDto.setCurringTime(0);
-                materialDto.setKilosForEach((int) row.getCell(kilosForEachColumn).getNumericCellValue());
+                materialDto.setNetWeight((int) row.getCell(kilosForEachColumn).getNumericCellValue());
 
                 materialRepository.save(modelMapper.map(materialDto, Material.class));
 
@@ -99,7 +99,7 @@ public class MaterialServiceImpl implements MaterialService {
 
     @Override
     public List<Material> getAllMaterialsByKilosForEachNot(int kilosForEach) {
-        return this.materialRepository.findByKilosForEachNot(kilosForEach);
+        return this.materialRepository.findByNetWeightNot(kilosForEach);
     }
 
     @Override

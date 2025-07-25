@@ -20,5 +20,5 @@ public interface MaterialRepository extends JpaRepository<Material, Long> {
 
     List<Material> findByCurringTimeNotOrLeadTimeOffsetNot(int curringTime, int leadTimeOffset);
 
-    List<Material> findByKilosForEachNot(int kilosForEach);
+    List<Material> findByNetWeightNot(int kilosForEach);
 }

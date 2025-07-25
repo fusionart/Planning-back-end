@@ -43,7 +43,7 @@ public class MapToProductionOrderDtoImpl implements MapToProductionOrderDto {
             productionOrderDto.setProductionUnit(customFields.get("ProductionUnit").toString());
             productionOrderDto.setTotalQuantity(Double.parseDouble(customFields.get("TotalQuantity").toString()));
             productionOrderDto.setMfgOrderConfirmedYieldQty(Double.parseDouble(customFields.get("MfgOrderConfirmedYieldQty").toString()));
-            productionOrderDto.setSalesOrder(customFields.get("SalesOrder").toString());
+            productionOrderDto.setSalesOrder(productionOrderDto.getSalesOrder());
 
             LinkedHashMap<String, Object> customFieldsProdOperations =
                     (LinkedHashMap<String, Object>) productionOrderComponent.getCustomFields().get(

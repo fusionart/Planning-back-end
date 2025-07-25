@@ -19,5 +19,5 @@ public class MaterialDto {
     private String externalMaterialGroup;
     private Integer leadTimeOffset;
     private Integer curringTime;
-    private Integer kilosForEach;
+    private Integer netWeight;
 }
