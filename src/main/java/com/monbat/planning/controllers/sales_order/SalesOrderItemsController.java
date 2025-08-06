@@ -1,8 +1,8 @@
 package com.monbat.planning.controllers.sales_order;
 
-import com.monbat.planning.models.sales_order.SalesOrderDto;
-import com.monbat.planning.services.MapToSalesOrderDto;
+import com.monbat.planning.models.sales_order.SalesOrderByDate;
 import com.monbat.planning.services.SalesOrderService;
+import com.monbat.planning.services.impl.MapToSalesOrderItemsImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,20 +20,21 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/sap")
-public class SalesOrderController implements Serializable {
+public class SalesOrderItemsController implements Serializable {
 
     @Autowired
     private SalesOrderService salesOrderService;
     @Autowired
-    private MapToSalesOrderDto mapToSalesOrderDto;
+    private MapToSalesOrderItemsImpl mapToSalesOrderItems;
 
-    private static final Logger logger = LoggerFactory.getLogger(SalesOrderController.class);
+    private static final Logger logger = LoggerFactory.getLogger(SalesOrderItemsController.class);
 
     /**
      * Get sales orders with items within the specified date range
      * This endpoint returns sales orders with expanded items (same as original functionality)
      */
-    @RequestMapping(value = "/getSalesOrders", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/getSalesOrdersItems", method = RequestMethod.GET, produces =
+            MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> getSalesOrders(@RequestParam String username,
                                             @RequestParam String password,
                                             @RequestParam LocalDateTime reqDelDateBegin,
@@ -41,9 +42,9 @@ public class SalesOrderController implements Serializable {
         try {
             logger.info("Received request for sales orders from {} to {}", reqDelDateBegin, reqDelDateEnd);
 
-            List<SalesOrderDto> salesOrders =
-                    this.mapToSalesOrderDto.salesOrderList(this.salesOrderService.getSalesOrdersItems(
-                    username, password, reqDelDateBegin, reqDelDateEnd));
+            List<SalesOrderByDate> salesOrders =
+                    this.mapToSalesOrderItems.generateSalesOrderMainData(salesOrderService.getSalesOrdersItems(
+                    username, password, reqDelDateBegin, reqDelDateEnd), username, password, reqDelDateBegin, reqDelDateEnd);
 
             logger.info("Successfully retrieved {} sales orders", salesOrders.size());
             return ResponseEntity.ok(salesOrders);

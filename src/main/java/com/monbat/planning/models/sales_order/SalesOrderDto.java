@@ -12,7 +12,7 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class SalesOrderDto {
+    public class SalesOrderDto {
     private String salesOrderNumber;
     private String soldToParty;
     private LocalDateTime requestedDeliveryDate;
