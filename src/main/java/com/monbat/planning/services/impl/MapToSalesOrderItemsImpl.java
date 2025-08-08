@@ -105,7 +105,7 @@ public class MapToSalesOrderItemsImpl {
 
                     salesOrderMain.addDynamicSoValue(salesOrderHeader.getSalesOrder(),
                             new SalesOrderMainItem(salesOrderItem.getRequestedQuantity().doubleValue(), plannedOrder,
-                                    productionOrder));
+                                    productionOrder, salesOrderHeader.getCompleteDelivery(), salesOrderHeader.getSoldtoParty()));
 
                     salesOrderMainList.add(salesOrderMain);
 
@@ -117,7 +117,8 @@ public class MapToSalesOrderItemsImpl {
                     foundItem.ifPresent(item -> {
                         item.setRequestedQuantity(item.getRequestedQuantity() + salesOrderItem.getRequestedQuantity().doubleValue());
                         item.addDynamicSoValue(salesOrderHeader.getSalesOrder(),
-                                new SalesOrderMainItem(salesOrderItem.getRequestedQuantity().doubleValue(), plannedOrder, productionOrder));
+                                new SalesOrderMainItem(salesOrderItem.getRequestedQuantity().doubleValue(),
+                                        plannedOrder, productionOrder, salesOrderHeader.getCompleteDelivery(), salesOrderHeader.getSoldtoParty()));
                     });
                 }
             }

@@ -15,4 +15,6 @@ public class SalesOrderMainItem implements Serializable {
     private Double quantity;
     private String plannedOrder;
     private String productionOrder;
+    private Boolean completeDelivery;
+    private String customer;
 }
