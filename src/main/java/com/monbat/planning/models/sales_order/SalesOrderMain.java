@@ -12,20 +12,25 @@ import java.util.Map;
 public class SalesOrderMain implements Serializable {
     private String material;
     private Double requestedQuantity;
+    private Double cumulativeQuantity;
     private Double availableNotCharged;
     private Double availableCharged;
+    private Double finalBattery;
     private String requestedQuantityUnit;
     private String plant;
     private final Map<String, SalesOrderMainItem> dynamicSoItems;
 
     public SalesOrderMain(String material, double requestedQuantity, String plant,
-                          String requestedQuantityUnit, Double availableNotCharged, Double availableCharged) {
+                          String requestedQuantityUnit, double availableNotCharged, double availableCharged,
+                          double finalBattery, double cumulativeQuantity) {
         this.material = material;
         this.requestedQuantity = requestedQuantity;
         this.requestedQuantityUnit = requestedQuantityUnit;
         this.plant = plant;
         this.availableCharged = availableCharged;
         this.availableNotCharged = availableNotCharged;
+        this.finalBattery = finalBattery;
+        this.cumulativeQuantity = cumulativeQuantity;
         this.dynamicSoItems = new HashMap<>();
     }
 

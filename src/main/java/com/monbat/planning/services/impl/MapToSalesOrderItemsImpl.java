@@ -33,11 +33,11 @@ public class MapToSalesOrderItemsImpl {
     @Autowired
     private MaterialStockService materialStockService;
 
-    public List<SalesOrderByDate> generateSalesOrderMainData(List<SalesOrderHeader> salesOrderHeaders, String username,
+    private List<SalesOrderByDate> generateSalesOrderMainData(List<SalesOrderHeader> salesOrderHeaders, String username,
                                                            String password, LocalDateTime reqDelDateBegin, LocalDateTime reqDelDateEnd) {
 
         List<SalesOrderByDate> salesOrderByDateList = new ArrayList<>();
-        List<SalesOrderMain> salesOrderMainList = new ArrayList<>();
+        List<SalesOrderMain> salesOrderMainList;
         List<Material> materialList = (List<Material>) this.materialController.getMaterials();
 
         List<PlannedOrderDto> plannedOrderList = this.plannedOrderService.getPlannedOrders(username, password,
@@ -46,6 +46,7 @@ public class MapToSalesOrderItemsImpl {
                 password, reqDelDateBegin, reqDelDateBegin);
 
         for (SalesOrderHeader salesOrderHeader : salesOrderHeaders) {
+            assert salesOrderHeader.getRequestedDeliveryDate() != null;
             String targetWeek =
                     salesOrderHeader.getRequestedDeliveryDate().get(WeekFields.of(Locale.getDefault()).weekOfYear()) + "/" + salesOrderHeader.getRequestedDeliveryDate().getYear();
             Optional<SalesOrderByDate> foundOrder = salesOrderByDateList.stream()
@@ -95,13 +96,19 @@ public class MapToSalesOrderItemsImpl {
                             this.materialStockService.getMaterialStock(username, password,
                                     "11" + StringUtils.right(salesOrderItem.getMaterial(),
                                             salesOrderItem.getMaterial().length() - 2));
+                    double finalBatteryQuantity =
+                            this.materialStockService.getMaterialStock(username, password,
+                                    "10" + StringUtils.right(salesOrderItem.getMaterial(),
+                                            salesOrderItem.getMaterial().length() - 2));
 
                     assert salesOrderItem.getRequestedQuantity() != null;
                     SalesOrderMain salesOrderMain = new SalesOrderMain(salesOrderItem.getMaterial(),
                             salesOrderItem.getRequestedQuantity().doubleValue(), plantName,
                             salesOrderItem.getRequestedQtyUnit(),
                             notChargedQuantity,
-                            chargedQuantity);
+                            chargedQuantity,
+                            finalBatteryQuantity,
+                            salesOrderItem.getRequestedQuantity().doubleValue());
 
                     salesOrderMain.addDynamicSoValue(salesOrderHeader.getSalesOrder(),
                             new SalesOrderMainItem(salesOrderItem.getRequestedQuantity().doubleValue(), plannedOrder,
@@ -127,6 +134,45 @@ public class MapToSalesOrderItemsImpl {
         return salesOrderByDateList;
     }
 
+    public List<SalesOrderByDate> calculateCumulativeValues(List<SalesOrderHeader> salesOrderHeaders, String username,
+                      String password, LocalDateTime reqDelDateBegin, LocalDateTime reqDelDateEnd){
+        List<SalesOrderByDate> salesOrderByDateList = generateSalesOrderMainData(salesOrderHeaders, username,
+                password, reqDelDateBegin, reqDelDateEnd);
+
+        salesOrderByDateList.sort((o1, o2) -> {
+            String[] p1 = o1.getReqDlvWeek().split("/");
+            String[] p2 = o2.getReqDlvWeek().split("/");
+
+            int yearCompare = Integer.compare(Integer.parseInt(p1[1]), Integer.parseInt(p2[1]));
+            if (yearCompare != 0) return yearCompare;
+            return Integer.compare(Integer.parseInt(p1[0]), Integer.parseInt(p2[0]));
+        });
+
+        int k = 1;
+        for (int i = 0; i < salesOrderByDateList.size() - 1; i++) {
+
+            for (int j = 0; j < k; j++) {
+                List<SalesOrderMain> previousList =  salesOrderByDateList.get(j).getSalesOrderMainList();
+                List<SalesOrderMain> nextList =  salesOrderByDateList.get(k).getSalesOrderMainList();
+
+                for (SalesOrderMain salesOrderMain : nextList){
+                    String material = salesOrderMain.getMaterial();
+
+                    Double quantity = previousList.stream()
+                            .filter(order -> material.equals(order.getMaterial()))
+                            .findFirst()
+                            .map(SalesOrderMain::getCumulativeQuantity)
+                            .orElse(0.0);
+
+                    salesOrderMain.setCumulativeQuantity(quantity + salesOrderMain.getRequestedQuantity());
+                }
+            }
+            k++;
+        }
+
+        return salesOrderByDateList;
+    }
+
     private static String getPlantName(SalesOrderItem salesOrderItem, List<Material> materialList) {
         int plant = materialList.stream()
                 .filter(material -> {
@@ -146,7 +192,7 @@ public class MapToSalesOrderItemsImpl {
         // Check for VRLA
         plantName = switch (StringUtils.left(salesOrderItem.getMaterial(), 4)) {
             case "1012", "102M", "104M", "106M", "108H" -> "RP";
-            default -> plantName;
+            case null, default -> plantName;
         };
         return plantName;
     }

@@ -43,7 +43,7 @@ public class SalesOrderItemsController implements Serializable {
             logger.info("Received request for sales orders from {} to {}", reqDelDateBegin, reqDelDateEnd);
 
             List<SalesOrderByDate> salesOrders =
-                    this.mapToSalesOrderItems.generateSalesOrderMainData(salesOrderService.getSalesOrdersItems(
+                    this.mapToSalesOrderItems.calculateCumulativeValues(salesOrderService.getSalesOrdersItems(
                     username, password, reqDelDateBegin, reqDelDateEnd), username, password, reqDelDateBegin, reqDelDateEnd);
 
             logger.info("Successfully retrieved {} sales orders", salesOrders.size());
