@@ -16,10 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.temporal.WeekFields;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
+import java.util.*;
 
 @SuppressWarnings("unchecked")
 @Service
@@ -80,7 +77,7 @@ public class MapToSalesOrderItemsImpl {
 
                 String productionOrder = productionOrderList.stream()
                         .filter(material -> material.getMaterial().equals(salesOrderItem.getMaterial()))
-                        .filter(so -> so.getSalesOrder().equals(salesOrderHeader.getSalesOrder()))
+                        .filter(so -> Objects.equals(so.getSalesOrder(), salesOrderHeader.getSalesOrder()))
                         .findFirst()
                         .map(ProductionOrderDto::getProductionOrder)
                         .orElse("");
@@ -165,6 +162,9 @@ public class MapToSalesOrderItemsImpl {
                             .orElse(0.0);
 
                     salesOrderMain.setCumulativeQuantity(quantity + salesOrderMain.getRequestedQuantity());
+                    salesOrderMain.setTotalAvailableQuantity(salesOrderMain.getAvailableCharged() +
+                            salesOrderMain.getAvailableNotCharged() + salesOrderMain.getFinalBattery());
+                    salesOrderMain.setToProduce(salesOrderMain.getTotalAvailableQuantity() - salesOrderMain.getCumulativeQuantity());
                 }
             }
             k++;
@@ -173,12 +173,53 @@ public class MapToSalesOrderItemsImpl {
         return salesOrderByDateList;
     }
 
+//    public void calculateCumulativeQuantities(List<SalesOrderByDate> fullList) {
+//        // Сортираме листа по седмици
+//        fullList.sort((a, b) -> compareWeeks(a.getReqDlvWeek(), b.getReqDlvWeek()));
+//        // Map за съхранение на последното кумулативно количество за всеки материал
+//        Map<String, Double> lastCumulativeByMaterial = new HashMap<>();
+//        // Обхождаме всяка седмица
+//        for (SalesOrderByDate weekData : fullList) {
+//            // Обхождаме всички записи за тази седмица
+//            for (SalesOrderMain salesOrder : weekData.getSalesOrderMainList()) {
+//                String material = salesOrder.getMaterial();
+//                Double requestedQuantity = salesOrder.getRequestedQuantity();
+//                // Ако е първата седмица за този материал
+//                if (!lastCumulativeByMaterial.containsKey(material)) {
+//                    // Кумулативното количество е равно на заявеното количество
+//                    salesOrder.setCumulativeQuantity(requestedQuantity);
+//                    lastCumulativeByMaterial.put(material, requestedQuantity);
+//                } else {
+//                    // Кумулативното количество = предишното кумулативно + текущото заявено
+//                    Double newCumulative = lastCumulativeByMaterial.get(material) + requestedQuantity;
+//                    salesOrder.setCumulativeQuantity(newCumulative);
+//                    lastCumulativeByMaterial.put(material, newCumulative);
+//                }
+//            }
+//        }
+//    }
+//
+//    /**
+//     * Метод за сравнение на седмици във формат "23/2025"
+//     */
+//    private int compareWeeks(String week1, String week2) {
+//        String[] parts1 = week1.split("/");
+//        String[] parts2 = week2.split("/");
+//        int year1 = Integer.parseInt(parts1[1]);
+//        int year2 = Integer.parseInt(parts2[1]);
+//        int weekNum1 = Integer.parseInt(parts1[0]);
+//        int weekNum2 = Integer.parseInt(parts2[0]);
+//        // Първо сравняваме годината
+//        if (year1 != year2) {
+//            return Integer.compare(year1, year2);
+//        }
+//        // След това сравняваме номера на седмицата
+//        return Integer.compare(weekNum1, weekNum2);
+//    }
+
     private static String getPlantName(SalesOrderItem salesOrderItem, List<Material> materialList) {
         int plant = materialList.stream()
-                .filter(material -> {
-                    assert salesOrderItem.getMaterial() != null;
-                    return salesOrderItem.getMaterial().equals(material.getMaterial());
-                })
+                .filter(material -> salesOrderItem.getMaterial().equals(material.getMaterial()))
                 .findFirst()
                 .map(Material::getPlant)
                 .orElse(0);
@@ -192,7 +233,7 @@ public class MapToSalesOrderItemsImpl {
         // Check for VRLA
         plantName = switch (StringUtils.left(salesOrderItem.getMaterial(), 4)) {
             case "1012", "102M", "104M", "106M", "108H" -> "RP";
-            case null, default -> plantName;
+            default -> plantName;
         };
         return plantName;
     }

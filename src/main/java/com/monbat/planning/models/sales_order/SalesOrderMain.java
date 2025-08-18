@@ -12,6 +12,8 @@ import java.util.Map;
 public class SalesOrderMain implements Serializable {
     private String material;
     private Double requestedQuantity;
+    private Double toProduce;
+    private Double totalAvailableQuantity;
     private Double cumulativeQuantity;
     private Double availableNotCharged;
     private Double availableCharged;
