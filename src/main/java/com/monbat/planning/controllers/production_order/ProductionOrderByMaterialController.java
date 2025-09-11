@@ -1,7 +1,7 @@
 package com.monbat.planning.controllers.production_order;
 
 import com.monbat.planning.models.production_order.ProductionOrderDto;
-import com.monbat.planning.services.ProductionOrderService;
+import com.monbat.planning.services.ProductionOrderByMaterialService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,28 +20,24 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/sap")
-public class ProductionOrderController implements Serializable {
-
+public class ProductionOrderByMaterialController implements Serializable {
     @Autowired
-    private ProductionOrderService productionOrderService;
+    private ProductionOrderByMaterialService productionOrderByMaterialService;
 
     @Serial
     private static final long serialVersionUID = 1L;
-    private static final Logger logger = LoggerFactory.getLogger(ProductionOrderController.class);
+    private static final Logger logger = LoggerFactory.getLogger(ProductionOrderByMaterialController.class);
 
-    /**
-     * Get production orders within the specified date range
-     */
-    @RequestMapping(value = "/getProductionOrders", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/getProductionOrdersByMaterial", method = RequestMethod.GET, produces =
+            MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> getProductionOrders(@RequestParam String username,
                                                  @RequestParam String password,
+                                                 @RequestParam String material,
                                                  @RequestParam LocalDateTime reqDelDateBegin,
                                                  @RequestParam LocalDateTime reqDelDateEnd) {
         try {
-            logger.info("Received request for production orders from {} to {}", reqDelDateBegin, reqDelDateEnd);
-
-            List<ProductionOrderDto> productionOrders = this.productionOrderService.getProductionOrders(
-                    username, password, reqDelDateBegin, reqDelDateEnd);
+            List<ProductionOrderDto> productionOrders = this.productionOrderByMaterialService.getProductionOrders(
+                    username, password, material, reqDelDateBegin, reqDelDateEnd);
 
             logger.info("Successfully retrieved {} production orders", productionOrders.size());
             return ResponseEntity.ok(productionOrders);

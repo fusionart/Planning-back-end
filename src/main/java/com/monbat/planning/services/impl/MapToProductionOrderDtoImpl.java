@@ -20,6 +20,11 @@ public class MapToProductionOrderDtoImpl implements MapToProductionOrderDto {
 
         for (ProductionOrderComponents productionOrderComponent : productionOrderComponentsList){
             Map<String, Object> customFields = productionOrderComponent.getCustomFields();
+            Map<String, Object> productionOrderOperationLevel1 =
+                    (Map<String, Object>) productionOrderComponent.getCustomFields().get("to_ProductionOrderOperation");
+            List<Map<String, Object>> productionOrderOperationLevel2 =
+                    (List<Map<String, Object>>) productionOrderOperationLevel1.values().iterator().next();
+            Map<String, Object> productionOrderOperationLevel3 = productionOrderOperationLevel2.getFirst();
 
             ProductionOrderDto productionOrderDto = new ProductionOrderDto();
             productionOrderDto.setMaterial(productionOrderComponent.getMaterial());
@@ -29,7 +34,7 @@ public class MapToProductionOrderDtoImpl implements MapToProductionOrderDto {
             productionOrderDto.setProductionPlant(productionOrderComponent.getProductionPlant());
 
             productionOrderDto.setOrderIsReleased(!customFields.get("OrderIsReleased").toString().isEmpty());
-            productionOrderDto.setOrderIsScheduled(!customFields.get("OrderIsScheduled").toString().isEmpty());
+            productionOrderDto.setOrderIsScheduled(!productionOrderOperationLevel3.get("OperationIsScheduled").toString().isEmpty());
             productionOrderDto.setProductionSupervisor(customFields.get("ProductionSupervisor").toString());
             productionOrderDto.setProductionVersion(customFields.get("ProductionVersion").toString());
             productionOrderDto.setMfgOrderScheduledStartDate(HelperMethods.convertEpochDateToLocalDate(customFields.get(
@@ -60,8 +65,6 @@ public class MapToProductionOrderDtoImpl implements MapToProductionOrderDto {
 
             productionOrderDtoList.add(productionOrderDto);
         }
-
-
         return productionOrderDtoList;
     }
 }
