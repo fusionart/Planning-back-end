@@ -10,12 +10,12 @@ public interface ProductionOrderService {
                                                  LocalDateTime reqDelDateBegin,
                                                  LocalDateTime reqDelDateEnd);
 
-    void convertPlannedOrder(String username, String password,
+    String convertPlannedOrder(String username, String password,
                              String plannedOrder,
                              String manufacturingOrderType);
 
     void updateProductionOrder(String username, String password,
-                             String productionOrder);
+                             String productionOrder, LocalDateTime scheduledStartDateTime);
 
     ProductionOrderDto getProductionOrder(String username, String password,
                                           String productionOrder);

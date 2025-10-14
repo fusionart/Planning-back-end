@@ -106,10 +106,11 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
     }
 
     @Override
-    public void convertPlannedOrder(String username, String password, String plannedOrder,
+    public String convertPlannedOrder(String username, String password, String plannedOrder,
                                     String manufacturingOrderType) {
         Base64 base64 = new Base64();
         CloseableHttpClient httpClient = null;
+        String productionOrder = null;
 
         try {
             String decodedUsername = new String(base64.decode(username.getBytes()));
@@ -183,7 +184,7 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
                     // Parse and extract the created production order number
                     try {
                         JSONObject responseJson = new JSONObject(responseBody);
-                        String productionOrder = null;
+
 
                         // Try different response formats
                         if (responseJson.has("d")) {
@@ -220,16 +221,17 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
         } finally {
             if (httpClient != null) {
                 try {
-                    httpClient.close();
+                    //httpClient.close();
                 } catch (Exception e) {
                     logger.warn("Error closing HTTP client", e);
                 }
             }
         }
+        return productionOrder;
     }
 
     @Override
-    public void updateProductionOrder(String username, String password, String manufacturingOrder) {
+    public void updateProductionOrder(String username, String password, String productionOrder, LocalDateTime scheduledStartDateTime) {
         Base64 base64 = new Base64();
         CloseableHttpClient httpClient = null;
 
@@ -250,10 +252,9 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
             httpClient = (CloseableHttpClient) HttpClientAccessor.getHttpClient(destination);
 
             // Just schedule the operations - skip all PATCH operations
-            scheduleProductionOrderOperations(username, password, manufacturingOrder,
-                    httpClient, decodedUsername, decodedPassword);
+            scheduleProductionOrderOperations(productionOrder, httpClient, decodedUsername, decodedPassword, scheduledStartDateTime);
 
-            logger.info("Production order {} operations successfully scheduled", manufacturingOrder);
+            logger.info("Production order {} operations successfully scheduled", productionOrder);
 
         } catch (Exception e) {
             logger.error("Error in updateProductionOrder: ", e);
@@ -269,11 +270,11 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
         }
     }
 
-    private void scheduleProductionOrderOperations(String username, String password,
-                                                   String manufacturingOrder,
+    private void scheduleProductionOrderOperations(String manufacturingOrder,
                                                    CloseableHttpClient httpClient,
                                                    String decodedUsername,
-                                                   String decodedPassword) {
+                                                   String decodedPassword,
+                                                   LocalDateTime scheduledStartDateTime) {
         try {
             String operationsUrl = PRODUCTION_ORDER_URL + "/A_ProductionOrder_2('" + manufacturingOrder + "')" +
                     "/to_ProductionOrderOperation?sap-client=" + SAP_CLIENT;
@@ -316,7 +317,6 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
                     }
 
                     // Prepare dates
-                    LocalDateTime scheduledStartDateTime = LocalDateTime.now().plusHours(1);
                     DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
                     String startDate = scheduledStartDateTime.format(dateFormatter);
                     String startTime = String.format("PT%02dH%02dM%02dS",

@@ -56,20 +56,50 @@ public class ProductionOrderController implements Serializable {
 
     @RequestMapping(value = "/convertPlannedOrder", method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE)
-    public void convertPlannedOrder (@RequestParam String username,
-                                     @RequestParam String password,
-                                     @RequestParam String plannedOrder,
-                                     @RequestParam String manufacturingOrderType) {
+    public ResponseEntity<?> convertPlannedOrder(@RequestParam String username,
+                                                 @RequestParam String password,
+                                                 @RequestParam String plannedOrder,
+                                                 @RequestParam String manufacturingOrderType) {
+        try {
+            logger.info("Converting planned order {} with manufacturing order type {}",
+                    plannedOrder, manufacturingOrderType);
 
-        this.productionOrderService.convertPlannedOrder(username, password, plannedOrder, manufacturingOrderType);
+            String productionOrderNumber = this.productionOrderService.convertPlannedOrder(
+                    username, password, plannedOrder, manufacturingOrderType);
+
+            logger.info("Successfully converted planned order {} to production order {}",
+                    plannedOrder, productionOrderNumber);
+
+            return ResponseEntity.ok(productionOrderNumber);
+
+        } catch (Exception e) {
+            logger.error("Error in convertPlannedOrder: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
     }
 
     @RequestMapping(value = "/updateProductionOrder", method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE)
-    public void updateProductionOrder (@RequestParam String username,
-                                     @RequestParam String password,
-                                     @RequestParam String productionOrder) {
+    public ResponseEntity<?> updateProductionOrder(@RequestParam String username,
+                                                   @RequestParam String password,
+                                                   @RequestParam String productionOrder,
+                                                   @RequestParam LocalDateTime scheduledStartDateTime) {
+        try {
+            logger.info("Updating production order {} with scheduled start date/time {}",
+                    productionOrder, scheduledStartDateTime);
 
-        this.productionOrderService.updateProductionOrder(username, password, productionOrder);
+            this.productionOrderService.updateProductionOrder(
+                    username, password, productionOrder, scheduledStartDateTime);
+
+            logger.info("Successfully updated production order {}", productionOrder);
+
+            return ResponseEntity.ok("Production order updated successfully");
+
+        } catch (Exception e) {
+            logger.error("Error in updateProductionOrder: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
     }
 }
