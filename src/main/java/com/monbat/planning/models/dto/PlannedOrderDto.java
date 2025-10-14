@@ -13,4 +13,5 @@ public class PlannedOrderDto {
     private String productionPlan;
     private Double totalQuantity;
     private String salesOrder;
+    private String etag;
 }

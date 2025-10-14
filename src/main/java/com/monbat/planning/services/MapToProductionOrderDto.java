@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface MapToProductionOrderDto {
     List<ProductionOrderDto> productionOrderList(List<ProductionOrderComponents> productionOrderComponentsList);
+    ProductionOrderDto productionOrder(List<ProductionOrderComponents> productionOrderComponentsList);
 }

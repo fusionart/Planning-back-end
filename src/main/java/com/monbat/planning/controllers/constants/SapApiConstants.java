@@ -6,6 +6,7 @@ public class SapApiConstants {
             ".com:44300/sap/opu/odata/sap/API_PRODUCTION_ORDER_2_SRV/";
 
     public static final String PRODUCTION_ORDER_MAIN_GET = "A_ProductionOrder_2";
+    public static final String CONVERT_PLANNED_ORDER = "ConvertPlndOrder";
 
     //Sales order
     public static final String SALES_ORDER_URL = "https://vhmotds4ci.sap.monbat" +

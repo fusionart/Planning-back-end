@@ -9,4 +9,14 @@ public interface ProductionOrderService {
     List<ProductionOrderDto> getProductionOrders(String username, String password,
                                                  LocalDateTime reqDelDateBegin,
                                                  LocalDateTime reqDelDateEnd);
+
+    void convertPlannedOrder(String username, String password,
+                             String plannedOrder,
+                             String manufacturingOrderType);
+
+    void updateProductionOrder(String username, String password,
+                             String productionOrder);
+
+    ProductionOrderDto getProductionOrder(String username, String password,
+                                          String productionOrder);
 }

@@ -29,4 +29,5 @@ public class ProductionOrderDto {
     private Double totalQuantity;
     private Double mfgOrderConfirmedYieldQty;
     private String salesOrder;
+    private String etag;
 }

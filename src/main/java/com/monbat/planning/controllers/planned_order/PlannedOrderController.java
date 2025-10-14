@@ -37,7 +37,7 @@ public class PlannedOrderController implements Serializable {
         try {
             logger.info("Received request for planned orders from {} to {}", reqDelDateBegin, reqDelDateEnd);
 
-            List<PlannedOrderDto> plannedOrders = plannedOrderService.getPlannedOrders(
+            List<PlannedOrderDto> plannedOrders = this.plannedOrderService.getPlannedOrders(
                     username, password, reqDelDateBegin, reqDelDateEnd);
 
             logger.info("Successfully retrieved {} planned orders", plannedOrders.size());
