@@ -102,4 +102,30 @@ public class ProductionOrderController implements Serializable {
                     .body("Error: " + e.getMessage());
         }
     }
+
+    @RequestMapping(value = "/createProductionOrder", method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> createProductionOrder(@RequestParam String username,
+                                                   @RequestParam String password,
+                                                   @RequestParam String material,
+                                                   @RequestParam String productionPlant,
+                                                   @RequestParam String manufacturingOrderType,
+                                                   @RequestParam String totalQuantity) {
+        try {
+            logger.info("Creating production order for material {} in plant {} with quantity {}",
+                    material, productionPlant, totalQuantity);
+
+            String productionOrderNumber = this.productionOrderService.createProductionOrder(
+                    username, password, material, productionPlant, manufacturingOrderType, totalQuantity);
+
+            logger.info("Successfully created production order: {}", productionOrderNumber);
+
+            return ResponseEntity.ok(productionOrderNumber);
+
+        } catch (Exception e) {
+            logger.error("Error in createProductionOrder: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
 }

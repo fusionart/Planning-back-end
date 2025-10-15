@@ -19,4 +19,10 @@ public interface ProductionOrderService {
 
     ProductionOrderDto getProductionOrder(String username, String password,
                                           String productionOrder);
+
+    String createProductionOrder(String username, String password,
+                                 String material,
+                                 String productionPlant,
+                                 String manufacturingOrderType,
+                                 String totalQuantity);
 }

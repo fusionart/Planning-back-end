@@ -490,6 +490,127 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
         }
     }
 
+    @Override
+    public String createProductionOrder(String username, String password,
+                                        String material,
+                                        String productionPlant,
+                                        String manufacturingOrderType,
+                                        String totalQuantity) {
+        CloseableHttpClient httpClient = null;
+        String productionOrderNumber = null;
+
+        try {
+            String decodedUsername = new String(base64.decode(username.getBytes()));
+            String decodedPassword = new String(base64.decode(password.getBytes()));
+
+            HttpDestination destination = DefaultDestination.builder()
+                    .property("Name", "mydestination")
+                    .property("URL", PRODUCTION_ORDER_URL)
+                    .property("Type", "HTTP")
+                    .property("Authentication", "BasicAuthentication")
+                    .property("User", decodedUsername)
+                    .property("Password", decodedPassword)
+                    .property("TrustAll", "true")
+                    .build().asHttp();
+
+            httpClient = (CloseableHttpClient) HttpClientAccessor.getHttpClient(destination);
+
+            // Fetch CSRF token
+            String csrfToken = fetchCSRFToken(httpClient, decodedUsername, decodedPassword);
+
+            // Build the POST request URI
+            URI uri = new URIBuilder(PRODUCTION_ORDER_URL + "/A_ProductionOrder_2")
+                    .addParameter("sap-client", SAP_CLIENT)
+                    .build();
+
+            HttpPost request = new HttpPost(uri);
+            request.setHeader("Content-Type", "application/json");
+            request.setHeader("Accept", "application/json");
+            request.setHeader("X-CSRF-Token", csrfToken);
+
+            // Add Basic Auth header
+            String auth = decodedUsername + ":" + decodedPassword;
+            String encodedAuth = new String(base64.encode(auth.getBytes(StandardCharsets.UTF_8)));
+            request.setHeader("Authorization", "Basic " + encodedAuth);
+
+            // Create request body
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("Material", material);
+            requestBody.put("ProductionPlant", productionPlant);
+            requestBody.put("ManufacturingOrderType", manufacturingOrderType);
+            requestBody.put("ProductionVersion", "1000");
+            requestBody.put("TotalQuantity", totalQuantity);
+            requestBody.put("BasicSchedulingType", "4");
+
+            StringEntity entity = new StringEntity(requestBody.toString(), ContentType.APPLICATION_JSON);
+            request.setEntity(entity);
+
+            logger.info("Creating production order for material {} in plant {} with quantity {}",
+                    material, productionPlant, totalQuantity);
+            logger.debug("Request body: {}", requestBody.toString());
+
+            // Execute the request
+            try (CloseableHttpResponse response = httpClient.execute(request)) {
+                HttpEntity responseEntity = response.getEntity();
+                String responseBody = responseEntity != null ?
+                        EntityUtils.toString(responseEntity) : "No response body";
+
+                int statusCode = response.getStatusLine().getStatusCode();
+
+                if (statusCode >= 200 && statusCode < 300) {
+                    logger.info("Production order created successfully");
+                    logger.debug("Response: {}", responseBody);
+
+                    // Parse and extract the production order number from the response
+                    try {
+                        JSONObject responseJson = new JSONObject(responseBody);
+
+                        // Try different response formats
+                        if (responseJson.has("d")) {
+                            JSONObject data = responseJson.getJSONObject("d");
+                            if (data.has("ManufacturingOrder")) {
+                                productionOrderNumber = data.getString("ManufacturingOrder");
+                            } else if (data.has("ProductionOrder")) {
+                                productionOrderNumber = data.getString("ProductionOrder");
+                            }
+                        } else if (responseJson.has("ManufacturingOrder")) {
+                            productionOrderNumber = responseJson.getString("ManufacturingOrder");
+                        } else if (responseJson.has("ProductionOrder")) {
+                            productionOrderNumber = responseJson.getString("ProductionOrder");
+                        }
+
+                        if (productionOrderNumber != null && !productionOrderNumber.isEmpty()) {
+                            logger.info("Successfully created Production Order: {}", productionOrderNumber);
+                        } else {
+                            logger.warn("Creation successful but could not extract production order number from response");
+                            logger.debug("Response structure: {}", responseBody);
+                        }
+                    } catch (Exception e) {
+                        logger.warn("Could not parse production order number from response: {}", e.getMessage());
+                    }
+                } else {
+                    logger.error("Failed to create production order. Status code: {}", statusCode);
+                    logger.error("Response body: {}", responseBody);
+                    throw new RuntimeException("Failed to create production order. Status code: " + statusCode +
+                            ". Response: " + responseBody);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error in createProductionOrder: ", e);
+            throw new RuntimeException("Error creating production order: " + e.getMessage(), e);
+        } finally {
+            if (httpClient != null) {
+                try {
+                    //httpClient.close();
+                } catch (Exception e) {
+                    logger.warn("Error closing HTTP client", e);
+                }
+            }
+        }
+
+        return productionOrderNumber;
+    }
+
     private String formatDate(LocalDate date) {
         return date.toString(); // LocalDate.toString() returns ISO-8601 format (YYYY-MM-DD)
     }
