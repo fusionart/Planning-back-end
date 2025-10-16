@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -94,12 +96,22 @@ public class ProductionOrderController implements Serializable {
 
             logger.info("Successfully updated production order {}", productionOrder);
 
-            return ResponseEntity.ok("Production order updated successfully");
+            // Return JSON response instead of plain text
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Production order updated successfully");
+            response.put("productionOrder", productionOrder);
+
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
             logger.error("Error in updateProductionOrder: ", e);
+
+            // Return JSON error response
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Error: " + e.getMessage());
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error: " + e.getMessage());
+                    .body(errorResponse);
         }
     }
 
@@ -121,6 +133,25 @@ public class ProductionOrderController implements Serializable {
             logger.info("Successfully created production order: {}", productionOrderNumber);
 
             return ResponseEntity.ok(productionOrderNumber);
+
+        } catch (Exception e) {
+            logger.error("Error in createProductionOrder: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    @RequestMapping(value = "/updateStorageLocation", method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> updateStorageLocation(@RequestParam String username,
+                                                   @RequestParam String password,
+                                                   @RequestParam String manufacturingOrder,
+                                                   @RequestParam String newStorageLocation) {
+        try {
+            this.productionOrderService.updateStorageLocation(
+                    username, password, manufacturingOrder, newStorageLocation);
+
+            return ResponseEntity.ok("ok");
 
         } catch (Exception e) {
             logger.error("Error in createProductionOrder: ", e);

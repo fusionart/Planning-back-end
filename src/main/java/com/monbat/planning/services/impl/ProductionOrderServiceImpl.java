@@ -16,6 +16,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.ContentType;
@@ -533,12 +534,20 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
             String encodedAuth = new String(base64.encode(auth.getBytes(StandardCharsets.UTF_8)));
             request.setHeader("Authorization", "Basic " + encodedAuth);
 
+            String productionVersion;
+
+            if (manufacturingOrderType.equals("ZP98")){
+                productionVersion = "7000";
+            } else {
+                productionVersion = "1000";
+            }
+
             // Create request body
             JSONObject requestBody = new JSONObject();
             requestBody.put("Material", material);
             requestBody.put("ProductionPlant", productionPlant);
             requestBody.put("ManufacturingOrderType", manufacturingOrderType);
-            requestBody.put("ProductionVersion", "1000");
+            requestBody.put("ProductionVersion", productionVersion);
             requestBody.put("TotalQuantity", totalQuantity);
             requestBody.put("BasicSchedulingType", "4");
 
@@ -609,6 +618,120 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
         }
 
         return productionOrderNumber;
+    }
+
+    @Override
+    public void updateStorageLocation(String username, String password,
+                                      String manufacturingOrder, String newStorageLocation) {
+        Base64 base64 = new Base64();
+        try {
+            // Define the Production Order API URL - add this constant to SapApiConstants
+            // public static final String PRODUCTION_ORDER_URL = "https://vhmotds4ci.sap.monbat.com:44300/sap/opu/odata/sap/API_PRODUCTION_ORDER_2_SRV";
+            String productionOrderUrl = PRODUCTION_ORDER_URL;
+
+            HttpDestination destination = DefaultDestination.builder()
+                    .property("Name", "mydestination")
+                    .property("URL", productionOrderUrl)
+                    .property("Type", "HTTP")
+                    .property("Authentication", "BasicAuthentication")
+                    .property("User", new String(base64.decode(username.getBytes())))
+                    .property("Password", new String(base64.decode(password.getBytes())))
+                    .property("trustAll", "true")
+                    .build().asHttp();
+
+            CloseableHttpClient httpClient = (CloseableHttpClient) HttpClientAccessor.getHttpClient(destination);
+
+            // First, get CSRF token and ETag by fetching the entity
+            URI getUri = new URIBuilder(productionOrderUrl + "/A_ProductionOrder_2('" + manufacturingOrder + "')")
+                    .addParameter("$format", "json")
+                    .addParameter("sap-client", SAP_CLIENT)
+                    .build();
+
+            HttpGet getRequest = new HttpGet(getUri);
+            getRequest.setHeader("X-CSRF-Token", "Fetch");
+
+            String etag;
+            String csrfToken;
+
+            try (CloseableHttpResponse getResponse = httpClient.execute(getRequest)) {
+                int statusCode = getResponse.getStatusLine().getStatusCode();
+
+                if (statusCode != 200) {
+                    String errorResponse = EntityUtils.toString(getResponse.getEntity());
+                    logger.error("Failed to retrieve production order for update. Status code: {}, Response: {}",
+                            statusCode, errorResponse);
+                    throw new RuntimeException("Failed to retrieve production order. Status code: " + statusCode);
+                }
+
+                String jsonResponse = EntityUtils.toString(getResponse.getEntity());
+                JsonNode rootNode = objectMapper.readTree(jsonResponse);
+                JsonNode dataNode = rootNode.path("d");
+                etag = dataNode.path("__metadata").path("etag").asText();
+
+                // Get current StorageLocation value
+                String currentStorageLocation = dataNode.path("StorageLocation").asText();
+
+                // Get CSRF token from response header
+                csrfToken = getResponse.getFirstHeader("X-CSRF-Token").getValue();
+
+                logger.info("Retrieved ETag: {} and CSRF Token for Manufacturing Order: {}", etag, manufacturingOrder);
+                logger.info("Current StorageLocation: '{}', New StorageLocation: '{}'", currentStorageLocation, newStorageLocation);
+
+                // Check if value is already the same
+                if (currentStorageLocation.equals(newStorageLocation)) {
+                    logger.warn("StorageLocation is already set to '{}'. No update needed.", newStorageLocation);
+                    return;
+                }
+            }
+
+            // Now perform the PATCH request to update StorageLocation
+            // IMPORTANT: No query parameters allowed in PATCH requests
+            String patchUrl = productionOrderUrl + "/A_ProductionOrder_2('" + manufacturingOrder + "')";
+
+            HttpPatch patchRequest = new HttpPatch(patchUrl);
+            patchRequest.setHeader("Content-Type", "application/json");
+            patchRequest.setHeader("Accept", "application/json");
+            patchRequest.setHeader("If-Match", etag);
+            patchRequest.setHeader("X-CSRF-Token", csrfToken);
+            patchRequest.setHeader("sap-client", SAP_CLIENT);
+
+            // Create JSON payload
+            String payload = String.format("{\"StorageLocation\": \"%s\"}", newStorageLocation);
+            patchRequest.setEntity(new StringEntity(payload, "UTF-8"));
+
+            logger.info("Attempting to update StorageLocation for Manufacturing Order: {} to: {}",
+                    manufacturingOrder, newStorageLocation);
+
+            try (CloseableHttpResponse patchResponse = httpClient.execute(patchRequest)) {
+                int statusCode = patchResponse.getStatusLine().getStatusCode();
+
+                if (statusCode != 204 && statusCode != 200) {
+                    String errorResponse = EntityUtils.toString(patchResponse.getEntity());
+                    logger.error("Failed to update storage location. Status code: {}, Response: {}",
+                            statusCode, errorResponse);
+
+                    // Check if the error indicates the order wasn't changed
+                    if (errorResponse.contains("was not changed")) {
+                        logger.warn("The order was not changed. This could mean:");
+                        logger.warn("1. The StorageLocation value is already '{}'", newStorageLocation);
+                        logger.warn("2. The field cannot be changed in the current order status");
+                        logger.warn("3. The field may be read-only or requires different permissions");
+                        logger.warn("Order Status - IsReleased: {}, IsTechnicallyCompleted: {}, IsClosed: {}",
+                                "Check order status", "Check order status", "Check order status");
+                    }
+
+                    throw new RuntimeException("Failed to update storage location. Status code: " + statusCode +
+                            ", Response: " + errorResponse);
+                }
+
+                logger.info("Successfully updated StorageLocation to '{}' for Manufacturing Order '{}'",
+                        newStorageLocation, manufacturingOrder);
+            }
+
+        } catch (Exception e) {
+            logger.error("Error in updateStorageLocation: ", e);
+            throw new RuntimeException("Error updating storage location: " + e.getMessage(), e);
+        }
     }
 
     private String formatDate(LocalDate date) {
