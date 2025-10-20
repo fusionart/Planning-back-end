@@ -151,7 +151,12 @@ public class ProductionOrderController implements Serializable {
             this.productionOrderService.updateStorageLocation(
                     username, password, manufacturingOrder, newStorageLocation);
 
-            return ResponseEntity.ok("ok");
+            // Return JSON response instead of plain text
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Storage location updated successfully");
+            response.put("productionOrder", manufacturingOrder);
+
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
             logger.error("Error in createProductionOrder: ", e);

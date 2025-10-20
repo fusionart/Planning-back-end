@@ -48,7 +48,7 @@ public class MapToProductionOrderDtoImpl implements MapToProductionOrderDto {
             productionOrderDto.setProductionUnit(customFields.get("ProductionUnit").toString());
             productionOrderDto.setTotalQuantity(Double.parseDouble(customFields.get("TotalQuantity").toString()));
             productionOrderDto.setMfgOrderConfirmedYieldQty(Double.parseDouble(customFields.get("MfgOrderConfirmedYieldQty").toString()));
-            productionOrderDto.setSalesOrder(productionOrderDto.getSalesOrder());
+            productionOrderDto.setSalesOrder(productionOrderComponent.getSalesOrder());
 
             String etag = extractEtagFromProductionOrder(productionOrderComponent);
             productionOrderDto.setEtag(etag);

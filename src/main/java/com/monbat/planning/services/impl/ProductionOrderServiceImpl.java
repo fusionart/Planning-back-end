@@ -625,13 +625,9 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
                                       String manufacturingOrder, String newStorageLocation) {
         Base64 base64 = new Base64();
         try {
-            // Define the Production Order API URL - add this constant to SapApiConstants
-            // public static final String PRODUCTION_ORDER_URL = "https://vhmotds4ci.sap.monbat.com:44300/sap/opu/odata/sap/API_PRODUCTION_ORDER_2_SRV";
-            String productionOrderUrl = PRODUCTION_ORDER_URL;
-
             HttpDestination destination = DefaultDestination.builder()
                     .property("Name", "mydestination")
-                    .property("URL", productionOrderUrl)
+                    .property("URL", PRODUCTION_ORDER_URL)
                     .property("Type", "HTTP")
                     .property("Authentication", "BasicAuthentication")
                     .property("User", new String(base64.decode(username.getBytes())))
@@ -642,7 +638,7 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
             CloseableHttpClient httpClient = (CloseableHttpClient) HttpClientAccessor.getHttpClient(destination);
 
             // First, get CSRF token and ETag by fetching the entity
-            URI getUri = new URIBuilder(productionOrderUrl + "/A_ProductionOrder_2('" + manufacturingOrder + "')")
+            URI getUri = new URIBuilder(PRODUCTION_ORDER_URL + "/A_ProductionOrder_2('" + manufacturingOrder + "')")
                     .addParameter("$format", "json")
                     .addParameter("sap-client", SAP_CLIENT)
                     .build();
@@ -686,7 +682,7 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
 
             // Now perform the PATCH request to update StorageLocation
             // IMPORTANT: No query parameters allowed in PATCH requests
-            String patchUrl = productionOrderUrl + "/A_ProductionOrder_2('" + manufacturingOrder + "')";
+            String patchUrl = PRODUCTION_ORDER_URL + "/A_ProductionOrder_2('" + manufacturingOrder + "')";
 
             HttpPatch patchRequest = new HttpPatch(patchUrl);
             patchRequest.setHeader("Content-Type", "application/json");
