@@ -24,8 +24,12 @@ public interface ProductionOrderService {
                                  String material,
                                  String productionPlant,
                                  String manufacturingOrderType,
-                                 String totalQuantity);
+                                 String totalQuantity,
+                                 String productionVersion);
 
     void updateStorageLocation(String username, String password,
                                String manufacturingOrder, String newStorageLocation);
+
+    void updateProductionVersion(String username, String password,
+                               String manufacturingOrder, String productionVersion);
 }

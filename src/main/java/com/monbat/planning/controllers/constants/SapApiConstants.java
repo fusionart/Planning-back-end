@@ -24,8 +24,11 @@ public class SapApiConstants {
     public static final String MATERIAL_STOCK_ITEM_GET = "A_MaterialStock('%s')/to_MatlStkInAcctMod";
     public static final String MATERIAL_STOCK_ITEM_GET1 = "A_MatlStkInAcctMod";
 
+    public static final String PRODUCTION_VERSIONS_URL = "https://vhmotds4ci.sap.monbat.com:44300/sap/opu/odata4/sap/api_production_version/srvd_a2x/sap/productionversion/0001/ProductionVersion";
+
     //General
     public static final String TOP = "?$top=";
     public static final String SAP_CLIENT = "200";
+    public static final String SAP_MAIN = "https://vhmotds4ci.sap.monbat.com:44300";
 
 }

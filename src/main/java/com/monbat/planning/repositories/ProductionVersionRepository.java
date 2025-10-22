@@ -7,9 +7,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Repository
 public interface ProductionVersionRepository extends JpaRepository<ProductionVersion, Long> {
     ProductionVersion findFirstByMaterialAndProductionVersionNumber(String material, int productionVersionNumber);
+    List<ProductionVersion> findAllByMaterialAndPlant(String material, int plant);
 
     @Modifying
     @Transactional

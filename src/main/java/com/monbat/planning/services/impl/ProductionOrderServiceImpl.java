@@ -13,6 +13,7 @@ import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultDestination;
 import com.sap.cloud.sdk.cloudplatform.connectivity.HttpClientAccessor;
 import com.sap.cloud.sdk.cloudplatform.connectivity.HttpDestination;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -496,7 +497,8 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
                                         String material,
                                         String productionPlant,
                                         String manufacturingOrderType,
-                                        String totalQuantity) {
+                                        String totalQuantity,
+                                        String productionVersion) {
         CloseableHttpClient httpClient = null;
         String productionOrderNumber = null;
 
@@ -534,12 +536,12 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
             String encodedAuth = new String(base64.encode(auth.getBytes(StandardCharsets.UTF_8)));
             request.setHeader("Authorization", "Basic " + encodedAuth);
 
-            String productionVersion;
+            String productionVersionEdit;
 
             if (manufacturingOrderType.equals("ZP98")){
-                productionVersion = "7000";
+                productionVersionEdit = "7" + StringUtils.substring(productionVersion, 1);
             } else {
-                productionVersion = "1000";
+                productionVersionEdit = productionVersion;
             }
 
             // Create request body
@@ -547,7 +549,7 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
             requestBody.put("Material", material);
             requestBody.put("ProductionPlant", productionPlant);
             requestBody.put("ManufacturingOrderType", manufacturingOrderType);
-            requestBody.put("ProductionVersion", productionVersion);
+            requestBody.put("ProductionVersion", productionVersionEdit);
             requestBody.put("TotalQuantity", totalQuantity);
             requestBody.put("BasicSchedulingType", "4");
 
@@ -724,6 +726,87 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
                         newStorageLocation, manufacturingOrder);
             }
 
+        } catch (Exception e) {
+            logger.error("Error in updateStorageLocation: ", e);
+            throw new RuntimeException("Error updating storage location: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void updateProductionVersion(String username, String password, String manufacturingOrder, String productionVersion) {
+        Base64 base64 = new Base64();
+        try {
+            HttpDestination destination = DefaultDestination.builder()
+                    .property("Name", "mydestination")
+                    .property("URL", PRODUCTION_ORDER_URL)
+                    .property("Type", "HTTP")
+                    .property("Authentication", "BasicAuthentication")
+                    .property("User", new String(base64.decode(username.getBytes())))
+                    .property("Password", new String(base64.decode(password.getBytes())))
+                    .property("trustAll", "true")
+                    .build().asHttp();
+
+            CloseableHttpClient httpClient = (CloseableHttpClient) HttpClientAccessor.getHttpClient(destination);
+
+            // First, get CSRF token and ETag by fetching the entity
+            URI getUri = new URIBuilder(PRODUCTION_ORDER_URL + "/A_ProductionOrder_2('" + manufacturingOrder + "')")
+                    .addParameter("$format", "json")
+                    .addParameter("sap-client", SAP_CLIENT)
+                    .build();
+
+            HttpGet getRequest = new HttpGet(getUri);
+            getRequest.setHeader("X-CSRF-Token", "Fetch");
+
+            String etag;
+            String csrfToken;
+
+            try (CloseableHttpResponse getResponse = httpClient.execute(getRequest)) {
+                int statusCode = getResponse.getStatusLine().getStatusCode();
+
+                if (statusCode != 200) {
+                    String errorResponse = EntityUtils.toString(getResponse.getEntity());
+                    logger.error("Failed to retrieve production order for update. Status code: {}, Response: {}",
+                            statusCode, errorResponse);
+                    throw new RuntimeException("Failed to retrieve production order. Status code: " + statusCode);
+                }
+
+                String jsonResponse = EntityUtils.toString(getResponse.getEntity());
+                JsonNode rootNode = objectMapper.readTree(jsonResponse);
+                JsonNode dataNode = rootNode.path("d");
+                etag = dataNode.path("__metadata").path("etag").asText();
+                csrfToken = getResponse.getFirstHeader("X-CSRF-Token").getValue();
+            }
+
+            // Now perform the PATCH request to update StorageLocation
+            // IMPORTANT: No query parameters allowed in PATCH requests
+            String patchUrl = PRODUCTION_ORDER_URL + "/A_ProductionOrder_2('" + manufacturingOrder + "')";
+
+            HttpPatch patchRequest = new HttpPatch(patchUrl);
+            patchRequest.setHeader("Content-Type", "application/json");
+            patchRequest.setHeader("Accept", "application/json");
+            patchRequest.setHeader("If-Match", etag);
+            patchRequest.setHeader("X-CSRF-Token", csrfToken);
+            patchRequest.setHeader("sap-client", SAP_CLIENT);
+
+            // Create JSON payload
+            String payload = String.format("{\"ProductionVersion\": \"%s\"}", productionVersion);
+            patchRequest.setEntity(new StringEntity(payload, "UTF-8"));
+
+            logger.info("Attempting to update ProductionVersion for Manufacturing Order: {} to: {}",
+                    manufacturingOrder, productionVersion);
+
+            try (CloseableHttpResponse patchResponse = httpClient.execute(patchRequest)) {
+                int statusCode = patchResponse.getStatusLine().getStatusCode();
+
+                if (statusCode != 204 && statusCode != 200) {
+                    String errorResponse = EntityUtils.toString(patchResponse.getEntity());
+                    logger.error("Failed to update storage location. Status code: {}, Response: {}",
+                            statusCode, errorResponse);
+
+                    throw new RuntimeException("Failed to update storage location. Status code: " + statusCode +
+                            ", Response: " + errorResponse);
+                }
+            }
         } catch (Exception e) {
             logger.error("Error in updateStorageLocation: ", e);
             throw new RuntimeException("Error updating storage location: " + e.getMessage(), e);

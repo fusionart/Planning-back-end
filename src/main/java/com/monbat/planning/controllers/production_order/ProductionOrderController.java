@@ -122,13 +122,14 @@ public class ProductionOrderController implements Serializable {
                                                    @RequestParam String material,
                                                    @RequestParam String productionPlant,
                                                    @RequestParam String manufacturingOrderType,
-                                                   @RequestParam String totalQuantity) {
+                                                   @RequestParam String totalQuantity,
+                                                   @RequestParam String productionVersion) {
         try {
             logger.info("Creating production order for material {} in plant {} with quantity {}",
                     material, productionPlant, totalQuantity);
 
             String productionOrderNumber = this.productionOrderService.createProductionOrder(
-                    username, password, material, productionPlant, manufacturingOrderType, totalQuantity);
+                    username, password, material, productionPlant, manufacturingOrderType, totalQuantity, productionVersion);
 
             logger.info("Successfully created production order: {}", productionOrderNumber);
 
@@ -150,6 +151,30 @@ public class ProductionOrderController implements Serializable {
         try {
             this.productionOrderService.updateStorageLocation(
                     username, password, manufacturingOrder, newStorageLocation);
+
+            // Return JSON response instead of plain text
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Storage location updated successfully");
+            response.put("productionOrder", manufacturingOrder);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("Error in createProductionOrder: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    @RequestMapping(value = "/updateProductionVersion", method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> updateProductionVersion(@RequestParam String username,
+                                                   @RequestParam String password,
+                                                   @RequestParam String manufacturingOrder,
+                                                   @RequestParam String productionVersion) {
+        try {
+            this.productionOrderService.updateProductionVersion(
+                    username, password, manufacturingOrder, productionVersion);
 
             // Return JSON response instead of plain text
             Map<String, String> response = new HashMap<>();
