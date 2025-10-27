@@ -12,4 +12,10 @@ public interface PlannedOrderService {
 
     PlannedOrderDto getPlannedOrder(String username, String password,
                                     String plannedOrder);
+
+    void updatePlannedOrder(String username, String password, String plannedOrder, boolean plannedOrderCapacityIsDsptchd,
+                            String opLtstSchedldProcgStrtDte,
+                            String opLtstSchedldProcgStrtTme,
+                            String opLtstSchedldTrdwnStrtDte,
+                            String opLtstSchedldTrdwnStrtTme);
 }

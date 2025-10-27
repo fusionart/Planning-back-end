@@ -7,6 +7,7 @@ import com.monbat.planning.models.production_order.ProductionOrderDto;
 import com.monbat.planning.models.sales_order.SalesOrderByDate;
 import com.monbat.planning.models.sales_order.SalesOrderMain;
 import com.monbat.planning.models.sales_order.SalesOrderMainItem;
+import com.monbat.planning.services.BusinessPartnerService;
 import com.monbat.planning.services.MaterialStockService;
 import com.monbat.vdm.namespaces.opapisalesordersrv0001.SalesOrderHeader;
 import com.monbat.vdm.namespaces.opapisalesordersrv0001.SalesOrderItem;
@@ -29,6 +30,8 @@ public class MapToSalesOrderItemsImpl {
     private PlannedOrderServiceImpl plannedOrderService;
     @Autowired
     private MaterialStockService materialStockService;
+    @Autowired
+    private BusinessPartnerService businessPartnerService;
 
     private List<SalesOrderByDate> generateSalesOrderMainData(List<SalesOrderHeader> salesOrderHeaders, String username,
                                                            String password, LocalDateTime reqDelDateBegin, LocalDateTime reqDelDateEnd) {
@@ -109,7 +112,8 @@ public class MapToSalesOrderItemsImpl {
 
                     salesOrderMain.addDynamicSoValue(salesOrderHeader.getSalesOrder(),
                             new SalesOrderMainItem(salesOrderItem.getRequestedQuantity().doubleValue(), plannedOrder,
-                                    productionOrder, salesOrderHeader.getCompleteDelivery(), salesOrderHeader.getSoldtoParty()));
+                                    productionOrder, salesOrderHeader.getCompleteDelivery(),
+                                    salesOrderHeader.getSoldtoParty(), this.businessPartnerService.getBusinessPartnerName(username, password, salesOrderHeader.getSoldtoParty())));
 
                     salesOrderMainList.add(salesOrderMain);
 
@@ -122,7 +126,8 @@ public class MapToSalesOrderItemsImpl {
                         item.setRequestedQuantity(item.getRequestedQuantity() + salesOrderItem.getRequestedQuantity().doubleValue());
                         item.addDynamicSoValue(salesOrderHeader.getSalesOrder(),
                                 new SalesOrderMainItem(salesOrderItem.getRequestedQuantity().doubleValue(),
-                                        plannedOrder, productionOrder, salesOrderHeader.getCompleteDelivery(), salesOrderHeader.getSoldtoParty()));
+                                        plannedOrder, productionOrder, salesOrderHeader.getCompleteDelivery(),
+                                        salesOrderHeader.getSoldtoParty(), this.businessPartnerService.getBusinessPartnerName(username, password, salesOrderHeader.getSoldtoParty())));
                     });
                 }
             }
