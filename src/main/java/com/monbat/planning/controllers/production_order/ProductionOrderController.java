@@ -1,7 +1,6 @@
 package com.monbat.planning.controllers.production_order;
 
 import com.monbat.planning.models.production_order.ProductionOrderDto;
-import com.monbat.planning.services.ProductionOrderByMaterialService;
 import com.monbat.planning.services.ProductionOrderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,8 +26,6 @@ import java.util.Optional;
 public class ProductionOrderController implements Serializable {
     @Autowired
     private ProductionOrderService productionOrderService;
-    @Autowired
-    private ProductionOrderByMaterialService productionOrderByMaterialService;
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -66,12 +63,31 @@ public class ProductionOrderController implements Serializable {
                                                  @RequestParam LocalDateTime reqDelDateBegin,
                                                  @RequestParam LocalDateTime reqDelDateEnd) {
         try {
-            List<ProductionOrderDto> productionOrders = this.productionOrderByMaterialService.getProductionOrders(
+            List<ProductionOrderDto> productionOrders = this.productionOrderService.getProductionOrdersByMaterial(
                     username, password, material, reqDelDateBegin, reqDelDateEnd);
 
             logger.info("Successfully retrieved {} production orders", productionOrders.size());
             return ResponseEntity.ok(productionOrders);
 
+        } catch (Exception e) {
+            logger.error("Error in getProductionOrders: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    @RequestMapping(value = "/getProductionOrdersByProductionSupervisor", method = RequestMethod.GET, produces =
+            MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> getProductionOrdersByProductionSupervisor(@RequestParam String username,
+                                                           @RequestParam String password,
+                                                           @RequestParam String productionSupervisor,
+                                                           @RequestParam LocalDateTime reqDelDateBegin,
+                                                           @RequestParam LocalDateTime reqDelDateEnd) {
+        try {
+            List<ProductionOrderDto> productionOrders = this.productionOrderService.getProductionOrdersByProductionSupervisor(
+                    username, password, productionSupervisor, reqDelDateBegin, reqDelDateEnd);
+
+            return ResponseEntity.ok(productionOrders);
         } catch (Exception e) {
             logger.error("Error in getProductionOrders: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

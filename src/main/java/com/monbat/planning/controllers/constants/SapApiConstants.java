@@ -29,6 +29,11 @@ public class SapApiConstants {
             ".com:44300/sap/opu/odata/sap/API_BUSINESS_PARTNER/";
     public static final String BUSINESS_PARTNER_MAIN_GET = "A_BusinessPartner";
 
+    //Product
+    public static final String PRODUCT_URL = "https://vhmotds4ci.sap.monbat" +
+            ".com:44300/sap/opu/odata/sap/API_PRODUCT_SRV/";
+    public static final String PRODUCT_MAIN_GET = "A_Product";
+
     public static final String PRODUCTION_VERSIONS_URL = "https://vhmotds4ci.sap.monbat" +
         ".com:44300/sap/opu/odata4/sap/api_production_version/srvd_a2x/sap/productionversion/0001/ProductionVersion";
 

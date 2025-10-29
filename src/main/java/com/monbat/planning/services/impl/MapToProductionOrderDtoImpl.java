@@ -2,8 +2,11 @@ package com.monbat.planning.services.impl;
 
 import com.monbat.planning.models.production_order.ProductionOrderDto;
 import com.monbat.planning.services.MapToProductionOrderDto;
+import com.monbat.planning.services.ProductService;
 import com.monbat.planning.services.utils.HelperMethods;
+import com.monbat.planning.utils.UserSession;
 import com.monbat.vdm.namespaces.opapiproductionorder2srv0001.ProductionOrderComponents;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -13,6 +16,8 @@ import java.util.Map;
 
 @Service
 public class MapToProductionOrderDtoImpl implements MapToProductionOrderDto {
+    @Autowired
+    private ProductService productService;
 
     @Override
     public List<ProductionOrderDto> productionOrderList(List<ProductionOrderComponents> productionOrderComponentsList) {
@@ -28,8 +33,10 @@ public class MapToProductionOrderDtoImpl implements MapToProductionOrderDto {
 
             ProductionOrderDto productionOrderDto = new ProductionOrderDto();
             productionOrderDto.setMaterial(productionOrderComponent.getMaterial());
-            //productionOrderDto.setMaterialDescription(this.materialService.getMaterialByCode
-            // (productionOrderComponent.getMaterial()).getDescription());
+            productionOrderDto.setMaterialDescription(this.productService.getProductDescription(
+                    UserSession.getInstance().getUsername(),
+                    UserSession.getInstance().getPassword(),
+                    productionOrderComponent.getMaterial()));
             productionOrderDto.setProductionOrder(productionOrderComponent.getProductionOrder());
             productionOrderDto.setProductionPlant(productionOrderComponent.getProductionPlant());
 

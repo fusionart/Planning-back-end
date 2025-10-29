@@ -10,6 +10,17 @@ public interface ProductionOrderService {
                                                  LocalDateTime reqDelDateBegin,
                                                  LocalDateTime reqDelDateEnd);
 
+
+    List<ProductionOrderDto> getProductionOrdersByMaterial(String username, String password,
+                                                 String material,
+                                                 LocalDateTime reqDelDateBegin,
+                                                 LocalDateTime reqDelDateEnd);
+
+    List<ProductionOrderDto> getProductionOrdersByProductionSupervisor(String username, String password,
+                                                           String productionSupervisor,
+                                                           LocalDateTime reqDelDateBegin,
+                                                           LocalDateTime reqDelDateEnd);
+
     String convertPlannedOrder(String username, String password,
                              String plannedOrder,
                              String manufacturingOrderType);

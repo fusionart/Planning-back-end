@@ -3,7 +3,7 @@ package com.monbat.planning.services.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.monbat.planning.services.BusinessPartnerService;
-import com.monbat.vdm.namespaces.apibusinesspartner.BusinessPartner;
+import com.monbat.vdm.namespaces.sapicsmbusinesspartnerext.BusinessPartner;
 import com.sap.cloud.sdk.cloudplatform.connectivity.DefaultDestination;
 import com.sap.cloud.sdk.cloudplatform.connectivity.HttpClientAccessor;
 import com.sap.cloud.sdk.cloudplatform.connectivity.HttpDestination;
