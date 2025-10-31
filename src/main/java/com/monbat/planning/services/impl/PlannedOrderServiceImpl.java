@@ -3,6 +3,8 @@ package com.monbat.planning.services.impl;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.monbat.planning.models.dto.PlannedOrderDto;
 import com.monbat.planning.services.MapToPlannedOrderDto;
 import com.monbat.planning.services.PlannedOrderService;
@@ -86,7 +88,93 @@ public class PlannedOrderServiceImpl implements PlannedOrderService {
                 List<PlannedOrder> ordersList = new ArrayList<>();
 
                 for (JsonNode headerNode : resultsNode) {
+                    // Handle the to_PlannedOrderCapacity field specifically
+                    JsonNode capacityNode = headerNode.path("to_PlannedOrderCapacity");
+
+                    // If it's an object, convert it to an array
+                    if (capacityNode.isObject()) {
+                        ObjectNode modifiedNode = (ObjectNode) headerNode;
+                        ArrayNode arrayNode = modifiedNode.arrayNode();
+                        arrayNode.add(capacityNode);
+                        modifiedNode.set("to_PlannedOrderCapacity", arrayNode);
+                    }
+
                     PlannedOrder header = objectMapper.treeToValue(headerNode, PlannedOrder.class);
+                    ordersList.add(header);
+                }
+
+                return this.mapToPlannedOrderDto.getPlannedOrderList(ordersList);
+            }
+        } catch (Exception e) {
+            logger.error("Error in getPlannedOrders: ", e);
+            throw new RuntimeException("Error retrieving planned orders: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public List<PlannedOrderDto> getPlannedOrdersByProductionSupervisor(String username, String password, String productionSupervisor, LocalDateTime reqDelDateBegin, LocalDateTime reqDelDateEnd) {
+        Base64 base64 = new Base64();
+        try {
+            HttpDestination destination = DefaultDestination.builder()
+                    .property("Name", "mydestination")
+                    .property("URL", PLANNED_ORDER_URL)
+                    .property("Type", "HTTP")
+                    .property("Authentication", "BasicAuthentication")
+                    .property("User", new String(base64.decode(username.getBytes())))
+                    .property("Password", new String(base64.decode(password.getBytes())))
+                    .property("trustAll", "true")
+                    .build().asHttp();
+
+            CloseableHttpClient httpClient = (CloseableHttpClient) HttpClientAccessor.getHttpClient(destination);
+
+            URI uri = new URIBuilder(PLANNED_ORDER_URL + PLANNED_ORDER_MAIN_GET)
+                    .addParameter("$format", "json")
+                    .addParameter("$expand", "to_PlannedOrderCapacity")
+                    .addParameter("$filter", "ProductionSupervisor eq '" + productionSupervisor + "' and " +
+                            "PlndOrderPlannedStartDate gt datetime'" + reqDelDateBegin + "' and " +
+                            "PlndOrderPlannedEndDate lt datetime'"+ reqDelDateEnd + "'")
+                    .addParameter("sap-client", SAP_CLIENT)
+                    .build();
+
+            HttpGet request = new HttpGet(uri);
+            try (CloseableHttpResponse response = httpClient.execute(request)) {
+                int statusCode = response.getStatusLine().getStatusCode();
+
+                if (statusCode != 200) {
+                    logger.error("Failed to retrieve planned orders. Status code: {}", statusCode);
+                    throw new RuntimeException("Failed to retrieve planned orders. Status code: " + statusCode);
+                }
+
+                String jsonResponse = EntityUtils.toString(response.getEntity());
+                JsonNode rootNode = objectMapper.readTree(jsonResponse);
+                JsonNode resultsNode = rootNode.path("d").path("results");
+
+                List<PlannedOrder> ordersList = new ArrayList<>();
+
+                for (JsonNode headerNode : resultsNode) {
+                    // Normalize all navigation properties that might be objects instead of arrays
+                    ObjectNode normalizedNode = (ObjectNode) headerNode.deepCopy();
+
+                    // List of all navigation properties that might need normalization
+                    String[] navigationProperties = {
+                            "to_PlannedOrderCapacity",
+                            "to_PlannedOrderComponent",
+                            "to_PlannedOrderOperation",
+                            "to_PlannedOrderHeader"  // add any other navigation properties you have
+                    };
+
+                    for (String property : navigationProperties) {
+                        JsonNode navNode = normalizedNode.get(property);
+                        if (navNode != null && navNode.isObject()) {
+                            ArrayNode arrayNode = objectMapper.createArrayNode();
+                            arrayNode.add(navNode);
+                            normalizedNode.set(property, arrayNode);
+                        } else if (navNode == null || navNode.isNull()) {
+                            normalizedNode.set(property, objectMapper.createArrayNode());
+                        }
+                    }
+
+                    PlannedOrder header = objectMapper.treeToValue(normalizedNode, PlannedOrder.class);
                     ordersList.add(header);
                 }
 

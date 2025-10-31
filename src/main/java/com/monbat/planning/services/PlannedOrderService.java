@@ -10,6 +10,11 @@ public interface PlannedOrderService {
                                            LocalDateTime reqDelDateBegin,
                                            LocalDateTime reqDelDateEnd);
 
+    List<PlannedOrderDto> getPlannedOrdersByProductionSupervisor(String username, String password,
+                                           String productionSupervisor,
+                                           LocalDateTime reqDelDateBegin,
+                                           LocalDateTime reqDelDateEnd);
+
     PlannedOrderDto getPlannedOrder(String username, String password,
                                     String plannedOrder);
 

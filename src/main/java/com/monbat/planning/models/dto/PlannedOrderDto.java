@@ -24,4 +24,5 @@ public class PlannedOrderDto {
     private boolean plannedOrderCapacityIsDsptchd;
     private String workCenter;
     private String etag;
+    private String description;
 }

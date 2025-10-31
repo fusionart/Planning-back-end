@@ -49,4 +49,27 @@ public class PlannedOrderController implements Serializable {
                     .body("Error: " + e.getMessage());
         }
     }
+
+    @RequestMapping(value = "/getPlannedOrdersByProductionSupervisor", method = RequestMethod.GET, produces =
+            MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> getPlannedOrdersByProductionSupervisor(@RequestParam String username,
+                                              @RequestParam String password,
+                                              @RequestParam String productionSupervisor,
+                                              @RequestParam LocalDateTime reqDelDateBegin,
+                                              @RequestParam LocalDateTime reqDelDateEnd) {
+        try {
+            logger.info("Received request for planned orders from {} to {}", reqDelDateBegin, reqDelDateEnd);
+
+            List<PlannedOrderDto> plannedOrders = this.plannedOrderService.getPlannedOrdersByProductionSupervisor(
+                    username, password, productionSupervisor, reqDelDateBegin, reqDelDateEnd);
+
+            logger.info("Successfully retrieved {} planned orders", plannedOrders.size());
+            return ResponseEntity.ok(plannedOrders);
+
+        } catch (Exception e) {
+            logger.error("Error in getPlannedOrders: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
 }
