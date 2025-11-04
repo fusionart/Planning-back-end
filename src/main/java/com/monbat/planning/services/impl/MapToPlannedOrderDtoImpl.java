@@ -25,8 +25,8 @@ public class MapToPlannedOrderDtoImpl implements MapToPlannedOrderDto {
             List<PlannedOrderCapacity> plannedOrderCapacities = plannedOrder.getPlannedOrderCapacityOrFetch();
 
             PlannedOrderDto plannedOrderDto = mapBasicPlannedOrderFields(plannedOrder);
+            Map<String, Object> capacityData = extractCapacityData(plannedOrderCapacities);
 
-            Map<String, Object> capacityData = extractCapacityDataFromCustomFields(plannedOrderCapacities);
             if (capacityData != null) {
                 mapCapacityFields(plannedOrderDto, capacityData);
             } else {
@@ -54,21 +54,46 @@ public class MapToPlannedOrderDtoImpl implements MapToPlannedOrderDto {
         return dto;
     }
 
-    private Map<String, Object> extractCapacityDataFromCustomFields(List<PlannedOrderCapacity> plannedOrderCapacities) {
-        if (plannedOrderCapacities.isEmpty()) {
+    private Map<String, Object> extractCapacityData(List<?> plannedOrderCapacities) {
+        if (plannedOrderCapacities == null || plannedOrderCapacities.isEmpty()) {
             return null;
         }
 
-        PlannedOrderCapacity firstCapacity = plannedOrderCapacities.get(0);
+        Object firstItem = plannedOrderCapacities.get(0);
 
-        // Get the customFields from the PlannedOrderCapacity object
-        Map<String, Object> customFields = firstCapacity.getCustomFields();
+        // Handle case where we have PlannedOrderCapacity objects with customFields
+        if (firstItem instanceof PlannedOrderCapacity) {
+            PlannedOrderCapacity capacity = (PlannedOrderCapacity) firstItem;
+            Map<String, Object> customFields = capacity.getCustomFields();
+            return extractFromCustomFields(customFields);
+        }
+        // Handle case where we have raw Map objects
+        else if (firstItem instanceof Map) {
+            return extractFromMap((Map<String, Object>) firstItem);
+        }
+
+        return null;
+    }
+
+    private Map<String, Object> extractFromCustomFields(Map<String, Object> customFields) {
         if (customFields == null || customFields.isEmpty()) {
             return null;
         }
 
-        // Extract the results from customFields
         Object resultsObj = customFields.get("results");
+        return extractFromResults(resultsObj);
+    }
+
+    private Map<String, Object> extractFromMap(Map<String, Object> dataMap) {
+        if (dataMap == null || dataMap.isEmpty()) {
+            return null;
+        }
+
+        Object resultsObj = dataMap.get("results");
+        return extractFromResults(resultsObj);
+    }
+
+    private Map<String, Object> extractFromResults(Object resultsObj) {
         if (!(resultsObj instanceof List) || ((List<?>) resultsObj).isEmpty()) {
             return null;
         }

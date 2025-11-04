@@ -88,18 +88,29 @@ public class PlannedOrderServiceImpl implements PlannedOrderService {
                 List<PlannedOrder> ordersList = new ArrayList<>();
 
                 for (JsonNode headerNode : resultsNode) {
-                    // Handle the to_PlannedOrderCapacity field specifically
-                    JsonNode capacityNode = headerNode.path("to_PlannedOrderCapacity");
+                    // Normalize all navigation properties that might be objects instead of arrays
+                    ObjectNode normalizedNode = (ObjectNode) headerNode.deepCopy();
 
-                    // If it's an object, convert it to an array
-                    if (capacityNode.isObject()) {
-                        ObjectNode modifiedNode = (ObjectNode) headerNode;
-                        ArrayNode arrayNode = modifiedNode.arrayNode();
-                        arrayNode.add(capacityNode);
-                        modifiedNode.set("to_PlannedOrderCapacity", arrayNode);
+                    // List of all navigation properties that might need normalization
+                    String[] navigationProperties = {
+                            "to_PlannedOrderCapacity",
+                            "to_PlannedOrderComponent",
+                            "to_PlannedOrderOperation",
+                            "to_PlannedOrderHeader"  // add any other navigation properties you have
+                    };
+
+                    for (String property : navigationProperties) {
+                        JsonNode navNode = normalizedNode.get(property);
+                        if (navNode != null && navNode.isObject()) {
+                            ArrayNode arrayNode = objectMapper.createArrayNode();
+                            arrayNode.add(navNode);
+                            normalizedNode.set(property, arrayNode);
+                        } else if (navNode == null || navNode.isNull()) {
+                            normalizedNode.set(property, objectMapper.createArrayNode());
+                        }
                     }
 
-                    PlannedOrder header = objectMapper.treeToValue(headerNode, PlannedOrder.class);
+                    PlannedOrder header = objectMapper.treeToValue(normalizedNode, PlannedOrder.class);
                     ordersList.add(header);
                 }
 
