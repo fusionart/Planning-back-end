@@ -14,8 +14,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/sap")
@@ -26,9 +29,6 @@ public class PlannedOrderController implements Serializable {
 
     private static final Logger logger = LoggerFactory.getLogger(PlannedOrderController.class);
 
-    /**
-     * Get planned orders within the specified date range
-     */
     @RequestMapping(value = "/getPlannedOrders", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> getPlannedOrders(@RequestParam String username,
                                               @RequestParam String password,
@@ -65,6 +65,67 @@ public class PlannedOrderController implements Serializable {
 
             logger.info("Successfully retrieved {} planned orders", plannedOrders.size());
             return ResponseEntity.ok(plannedOrders);
+
+        } catch (Exception e) {
+            logger.error("Error in getPlannedOrders: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    @RequestMapping(value = "/dispatchPlannedOrder", method = RequestMethod.POST, produces =
+            MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> dispatchPlannedOrder(@RequestParam String username,
+                                                @RequestParam String password,
+                                                @RequestParam String plannedOrder,
+                                                @RequestParam LocalDateTime dispatchTime) {
+        try {
+            this.plannedOrderService.dispatchPlannedOrder(username, password, plannedOrder, dispatchTime);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "OK");
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("Error in getPlannedOrders: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    @RequestMapping(value = "/deallocatePlannedOrder", method = RequestMethod.POST, produces =
+            MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> deallocatePlannedOrder(@RequestParam String username,
+                                                  @RequestParam String password,
+                                                  @RequestParam String plannedOrder,
+                                                  @RequestParam LocalDateTime dispatchTime) {
+        try {
+            this.plannedOrderService.deallocatePlannedOrder(username, password, plannedOrder, dispatchTime);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "OK");
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("Error in getPlannedOrders: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    @RequestMapping(value = "/updatePlannedOrder", method = RequestMethod.POST, produces =
+            MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> updatePlannedOrder(@RequestParam String username,
+                                                  @RequestParam String password,
+                                                  @RequestParam String plannedOrder,
+                                                  @RequestParam String productionVersion,
+                                                  @RequestParam BigDecimal quantity) {
+        try {
+            this.plannedOrderService.updatePlannedOrder(username, password, plannedOrder, productionVersion, quantity);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "OK");
+            return ResponseEntity.ok(response);
 
         } catch (Exception e) {
             logger.error("Error in getPlannedOrders: ", e);

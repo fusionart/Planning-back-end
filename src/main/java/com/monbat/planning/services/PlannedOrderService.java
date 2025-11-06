@@ -2,6 +2,7 @@ package com.monbat.planning.services;
 
 import com.monbat.planning.models.dto.PlannedOrderDto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -18,9 +19,12 @@ public interface PlannedOrderService {
     PlannedOrderDto getPlannedOrder(String username, String password,
                                     String plannedOrder);
 
-    void updatePlannedOrder(String username, String password, String plannedOrder, boolean plannedOrderCapacityIsDsptchd,
-                            String opLtstSchedldProcgStrtDte,
-                            String opLtstSchedldProcgStrtTme,
-                            String opLtstSchedldTrdwnStrtDte,
-                            String opLtstSchedldTrdwnStrtTme);
+    void dispatchPlannedOrder(String username, String password, String plannedOrder,
+                            LocalDateTime opLtstSchedldProcgStrtDteTme);
+
+    void deallocatePlannedOrder(String username, String password, String plannedOrder,
+                              LocalDateTime opLtstSchedldProcgStrtDteTme);
+
+    void updatePlannedOrder(String username, String password, String plannedOrder,
+                            String productionVersion, BigDecimal totalQuantity);
 }
