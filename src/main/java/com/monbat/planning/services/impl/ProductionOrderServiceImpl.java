@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -331,7 +332,8 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
     }
 
     @Override
-    public void updateProductionOrder(String username, String password, String productionOrder, LocalDateTime scheduledStartDateTime) {
+    public void updateProductionOrder(String username, String password, String productionOrder,
+                                      LocalDateTime scheduledStartDateTime, boolean schedule) {
         Base64 base64 = new Base64();
         CloseableHttpClient httpClient = null;
 
@@ -352,7 +354,11 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
             httpClient = (CloseableHttpClient) HttpClientAccessor.getHttpClient(destination);
 
             // Just schedule the operations - skip all PATCH operations
-            scheduleProductionOrderOperations(productionOrder, httpClient, decodedUsername, decodedPassword, scheduledStartDateTime);
+            if (schedule){
+                scheduleProductionOrderOperations(productionOrder, httpClient, decodedUsername, decodedPassword, scheduledStartDateTime);
+            } else {
+                deallocateProductionOrderOperations(productionOrder, httpClient, decodedUsername, decodedPassword, scheduledStartDateTime);
+            }
 
             logger.info("Production order {} operations successfully scheduled", productionOrder);
 
@@ -433,6 +439,102 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
                             "&OpSchedulingMode='F'" +
                             "&OpSchedulingStrategy='M'" +
                             "&OpSchedulingStatus='DISP'" +
+                            "&sap-client=" + SAP_CLIENT;
+
+                    HttpPost postRequest = new HttpPost(scheduleFunctionUrl);
+                    postRequest.setHeader("Accept", "application/json");
+                    postRequest.setHeader("X-CSRF-Token", csrfToken);
+                    postRequest.setHeader("Authorization", "Basic " + encodedAuth);
+
+                    // CRITICAL: Add If-Match header with ETag
+                    if (etag != null && !etag.isEmpty()) {
+                        postRequest.setHeader("If-Match", etag);
+                    } else {
+                        postRequest.setHeader("If-Match", "*");
+                    }
+
+                    logger.info("Scheduling operation {} for order {}", operationNumber, manufacturingOrder);
+                    logger.debug("Using ETag: {}", etag);
+
+                    try (CloseableHttpResponse scheduleResponse = httpClient.execute(postRequest)) {
+                        int statusCode = scheduleResponse.getStatusLine().getStatusCode();
+                        String scheduleResponseBody = EntityUtils.toString(scheduleResponse.getEntity());
+
+                        System.out.println("Schedule Response Status: " + statusCode);
+                        System.out.println("Schedule Response Body: " + scheduleResponseBody);
+
+                        if (statusCode >= 200 && statusCode < 300) {
+                            logger.info("Operation {} successfully scheduled - OperationIsScheduled set to X",
+                                    operationNumber);
+                        } else {
+                            logger.error("Failed to schedule operation {}. Status: {}, Response: {}",
+                                    operationNumber, statusCode, scheduleResponseBody);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error scheduling production order operations: ", e);
+            throw new RuntimeException("Error scheduling production order operations: " + e.getMessage(), e);
+        }
+    }
+
+    private void deallocateProductionOrderOperations(String manufacturingOrder,
+                                                   CloseableHttpClient httpClient,
+                                                   String decodedUsername,
+                                                   String decodedPassword,
+                                                   LocalDateTime scheduledStartDateTime) {
+        try {
+            String operationsUrl = PRODUCTION_ORDER_URL + "/A_ProductionOrder_2('" + manufacturingOrder + "')" +
+                    "/to_ProductionOrderOperation?sap-client=" + SAP_CLIENT;
+
+            HttpGet getRequest = new HttpGet(operationsUrl);
+            getRequest.setHeader("Accept", "application/json");
+
+            Base64 base64 = new Base64();
+            String auth = decodedUsername + ":" + decodedPassword;
+            String encodedAuth = new String(base64.encode(auth.getBytes(StandardCharsets.UTF_8)));
+            getRequest.setHeader("Authorization", "Basic " + encodedAuth);
+
+            try (CloseableHttpResponse getResponse = httpClient.execute(getRequest)) {
+                String responseBody = EntityUtils.toString(getResponse.getEntity());
+                JSONObject responseJson = new JSONObject(responseBody);
+                JSONArray results = responseJson.getJSONObject("d").getJSONArray("results");
+
+                String csrfToken = fetchCSRFToken(httpClient, decodedUsername, decodedPassword);
+
+                for (int i = 0; i < results.length(); i++) {
+                    JSONObject operation = results.getJSONObject(i);
+                    String orderInternalBillOfOperations = operation.getString("OrderInternalBillOfOperations");
+                    String orderIntBillOfOperationsItem = operation.getString("OrderIntBillOfOperationsItem");
+                    String operationNumber = operation.getString("ManufacturingOrderOperation");
+
+                    // Get ETag from metadata
+                    String etag = null;
+                    if (operation.has("__metadata")) {
+                        JSONObject metadata = operation.getJSONObject("__metadata");
+                        if (metadata.has("etag")) {
+                            etag = metadata.getString("etag");
+                        }
+                    }
+
+                    // Prepare dates
+                    DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                    String startDate = scheduledStartDateTime.format(dateFormatter);
+                    String startTime = String.format("PT%02dH%02dM%02dS",
+                            scheduledStartDateTime.getHour(),
+                            scheduledStartDateTime.getMinute(),
+                            scheduledStartDateTime.getSecond());
+
+                    String scheduleFunctionUrl = PRODUCTION_ORDER_URL + "/ScheduleProductionOrderOperation" +
+                            "?ManufacturingOrder='" + manufacturingOrder + "'" +
+                            "&OrderInternalBillOfOperations='" + orderInternalBillOfOperations + "'" +
+                            "&OrderIntBillOfOperationsItem='" + orderIntBillOfOperationsItem + "'" +
+                            "&OpSchedldStartDate=datetime'" + startDate + "T00:00:00'" +
+                            "&OpSchedldStartTime=time'" + startTime + "'" +
+                            "&OpSchedulingMode='F'" +
+                            "&OpSchedulingStrategy='M'" +
+                            "&OpSchedulingStatus='DEA'" +
                             "&sap-client=" + SAP_CLIENT;
 
                     HttpPost postRequest = new HttpPost(scheduleFunctionUrl);
@@ -898,16 +1000,94 @@ public class ProductionOrderServiceImpl implements ProductionOrderService {
 
                 if (statusCode != 204 && statusCode != 200) {
                     String errorResponse = EntityUtils.toString(patchResponse.getEntity());
-                    logger.error("Failed to update storage location. Status code: {}, Response: {}",
+                    logger.error("Failed to production version location. Status code: {}, Response: {}",
                             statusCode, errorResponse);
 
-                    throw new RuntimeException("Failed to update storage location. Status code: " + statusCode +
+                    throw new RuntimeException("Failed to update production version. Status code: " + statusCode +
+                            ", Response: " + errorResponse);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error in production version: ", e);
+            throw new RuntimeException("Error updating production version: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void updateProductionOrderQuantity(String username, String password, String productionOrder, BigDecimal quantity) {
+        Base64 base64 = new Base64();
+        try {
+            HttpDestination destination = DefaultDestination.builder()
+                    .property("Name", "mydestination")
+                    .property("URL", PRODUCTION_ORDER_URL)
+                    .property("Type", "HTTP")
+                    .property("Authentication", "BasicAuthentication")
+                    .property("User", new String(base64.decode(username.getBytes())))
+                    .property("Password", new String(base64.decode(password.getBytes())))
+                    .property("trustAll", "true")
+                    .build().asHttp();
+
+            CloseableHttpClient httpClient = (CloseableHttpClient) HttpClientAccessor.getHttpClient(destination);
+
+            // First, get CSRF token and ETag by fetching the entity
+            URI getUri = new URIBuilder(PRODUCTION_ORDER_URL + "/A_ProductionOrder_2('" + productionOrder + "')")
+                    .addParameter("$format", "json")
+                    .addParameter("sap-client", SAP_CLIENT)
+                    .build();
+
+            HttpGet getRequest = new HttpGet(getUri);
+            getRequest.setHeader("X-CSRF-Token", "Fetch");
+
+            String etag;
+            String csrfToken;
+
+            try (CloseableHttpResponse getResponse = httpClient.execute(getRequest)) {
+                int statusCode = getResponse.getStatusLine().getStatusCode();
+
+                if (statusCode != 200) {
+                    String errorResponse = EntityUtils.toString(getResponse.getEntity());
+                    logger.error("Failed to retrieve ProductionOrderQuantity for update. Status code: {}, Response: {}",
+                            statusCode, errorResponse);
+                    throw new RuntimeException("Failed to retrieve ProductionOrderQuantity. Status code: " + statusCode);
+                }
+
+                String jsonResponse = EntityUtils.toString(getResponse.getEntity());
+                JsonNode rootNode = objectMapper.readTree(jsonResponse);
+                JsonNode dataNode = rootNode.path("d");
+                etag = dataNode.path("__metadata").path("etag").asText();
+                csrfToken = getResponse.getFirstHeader("X-CSRF-Token").getValue();
+            }
+
+            // Now perform the PATCH request to update StorageLocation
+            // IMPORTANT: No query parameters allowed in PATCH requests
+            String patchUrl = PRODUCTION_ORDER_URL + "/A_ProductionOrder_2('" + productionOrder + "')";
+
+            HttpPatch patchRequest = new HttpPatch(patchUrl);
+            patchRequest.setHeader("Content-Type", "application/json");
+            patchRequest.setHeader("Accept", "application/json");
+            patchRequest.setHeader("If-Match", etag);
+            patchRequest.setHeader("X-CSRF-Token", csrfToken);
+            patchRequest.setHeader("sap-client", SAP_CLIENT);
+
+            // Create JSON payload
+            String payload = String.format("{\"TotalQuantity\": \"%s\"}", quantity);
+            patchRequest.setEntity(new StringEntity(payload, "UTF-8"));
+
+            try (CloseableHttpResponse patchResponse = httpClient.execute(patchRequest)) {
+                int statusCode = patchResponse.getStatusLine().getStatusCode();
+
+                if (statusCode != 204 && statusCode != 200) {
+                    String errorResponse = EntityUtils.toString(patchResponse.getEntity());
+                    logger.error("Failed to update ProductionOrderQuantity. Status code: {}, Response: {}",
+                            statusCode, errorResponse);
+
+                    throw new RuntimeException("Failed to update ProductionOrderQuantity. Status code: " + statusCode +
                             ", Response: " + errorResponse);
                 }
             }
         } catch (Exception e) {
             logger.error("Error in updateStorageLocation: ", e);
-            throw new RuntimeException("Error updating storage location: " + e.getMessage(), e);
+            throw new RuntimeException("Error updating ProductionOrderQuantity: " + e.getMessage(), e);
         }
     }
 

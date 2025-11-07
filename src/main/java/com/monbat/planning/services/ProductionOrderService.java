@@ -2,6 +2,7 @@ package com.monbat.planning.services;
 
 import com.monbat.planning.models.production_order.ProductionOrderDto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -26,7 +27,7 @@ public interface ProductionOrderService {
                              String manufacturingOrderType);
 
     void updateProductionOrder(String username, String password,
-                             String productionOrder, LocalDateTime scheduledStartDateTime);
+                             String productionOrder, LocalDateTime scheduledStartDateTime, boolean schedule);
 
     ProductionOrderDto getProductionOrder(String username, String password,
                                           String productionOrder);
@@ -43,4 +44,7 @@ public interface ProductionOrderService {
 
     void updateProductionVersion(String username, String password,
                                String manufacturingOrder, String productionVersion);
+
+    void updateProductionOrderQuantity(String username, String password,
+                                       String productionOrder, BigDecimal quantity);
 }

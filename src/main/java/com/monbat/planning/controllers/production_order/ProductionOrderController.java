@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -125,13 +126,14 @@ public class ProductionOrderController implements Serializable {
     public ResponseEntity<?> updateProductionOrder(@RequestParam String username,
                                                    @RequestParam String password,
                                                    @RequestParam String productionOrder,
-                                                   @RequestParam LocalDateTime scheduledStartDateTime) {
+                                                   @RequestParam LocalDateTime scheduledStartDateTime,
+                                                   @RequestParam boolean schedule) {
         try {
             logger.info("Updating production order {} with scheduled start date/time {}",
                     productionOrder, scheduledStartDateTime);
 
             this.productionOrderService.updateProductionOrder(
-                    username, password, productionOrder, scheduledStartDateTime);
+                    username, password, productionOrder, scheduledStartDateTime, schedule);
 
             logger.info("Successfully updated production order {}", productionOrder);
 
@@ -209,16 +211,39 @@ public class ProductionOrderController implements Serializable {
             produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> updateProductionVersion(@RequestParam String username,
                                                    @RequestParam String password,
-                                                   @RequestParam String manufacturingOrder,
+                                                   @RequestParam String productionOrder,
                                                    @RequestParam String productionVersion) {
         try {
             this.productionOrderService.updateProductionVersion(
-                    username, password, manufacturingOrder, productionVersion);
+                    username, password, productionOrder, productionVersion);
 
             // Return JSON response instead of plain text
             Map<String, String> response = new HashMap<>();
             response.put("message", "Storage location updated successfully");
-            response.put("productionOrder", manufacturingOrder);
+            response.put("productionOrder", productionOrder);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("Error in createProductionOrder: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    @RequestMapping(value = "/updateProductionOrderQuantity", method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> updateProductionOrderQuantity(@RequestParam String username,
+                                                     @RequestParam String password,
+                                                     @RequestParam String productionOrderOrder, @RequestParam BigDecimal quantity) {
+        try {
+            this.productionOrderService.updateProductionOrderQuantity(
+                    username, password, productionOrderOrder, quantity);
+
+            // Return JSON response instead of plain text
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Storage location updated successfully");
+            response.put("productionOrder", productionOrderOrder);
 
             return ResponseEntity.ok(response);
 
