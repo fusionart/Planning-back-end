@@ -25,4 +25,5 @@ public class PlannedOrderDto {
     private String workCenter;
     private String etag;
     private String description;
+    private String productionVersion;
 }

@@ -48,6 +48,7 @@ public class MapToPlannedOrderDtoImpl implements MapToPlannedOrderDto {
         dto.setProductionSupervisor(plannedOrder.getProductionSupervisor());
         dto.setDescription(plannedOrder.getMaterialDescription());
         dto.setPlannedOrderCapacityIsDsptchd(Boolean.TRUE.equals(plannedOrder.getCapacityDispatched()));
+        dto.setProductionVersion(plannedOrder.getProductionVersion());
 
         String etag = extractEtagFromPlannedOrder(plannedOrder);
         dto.setEtag(etag);
