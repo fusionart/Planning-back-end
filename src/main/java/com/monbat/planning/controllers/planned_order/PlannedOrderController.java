@@ -113,15 +113,34 @@ public class PlannedOrderController implements Serializable {
         }
     }
 
-    @RequestMapping(value = "/updatePlannedOrder", method = RequestMethod.POST, produces =
+    @RequestMapping(value = "/updatePlannedOrderQuantity", method = RequestMethod.POST, produces =
             MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> updatePlannedOrder(@RequestParam String username,
+    public ResponseEntity<?> updatePlannedOrderQuantity(@RequestParam String username,
                                                   @RequestParam String password,
                                                   @RequestParam String plannedOrder,
-                                                  @RequestParam String productionVersion,
                                                   @RequestParam BigDecimal quantity) {
         try {
-            this.plannedOrderService.updatePlannedOrder(username, password, plannedOrder, productionVersion, quantity);
+            this.plannedOrderService.updatePlannedOrderQuantity(username, password, plannedOrder, quantity);
+
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "OK");
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("Error in getPlannedOrders: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    @RequestMapping(value = "/updatePlannedOrderProductionVersion", method = RequestMethod.POST, produces =
+            MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> updatePlannedOrderProductionVersion(@RequestParam String username,
+                                                @RequestParam String password,
+                                                @RequestParam String plannedOrder,
+                                                @RequestParam String productionVersion) {
+        try {
+            this.plannedOrderService.updatePlannedOrderProductionVersion(username, password, plannedOrder, productionVersion);
 
             Map<String, String> response = new HashMap<>();
             response.put("message", "OK");

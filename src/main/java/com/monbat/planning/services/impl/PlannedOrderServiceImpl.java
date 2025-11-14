@@ -227,6 +227,7 @@ public class PlannedOrderServiceImpl implements PlannedOrderService {
 
             URI uri = new URIBuilder(PLANNED_ORDER_URL + PLANNED_ORDER_MAIN_GET + "('" + plannedOrderWithZeros + "')")
                     .addParameter("$format", "json")
+                    .addParameter("$expand", "to_PlannedOrderCapacity")
                     .addParameter("sap-client", SAP_CLIENT)
                     .build();
 
@@ -579,8 +580,8 @@ public class PlannedOrderServiceImpl implements PlannedOrderService {
     }
 
     @Override
-    public void updatePlannedOrder(String username, String password, String plannedOrder,
-                                   String productionVersion, BigDecimal totalQuantity) {
+    public void updatePlannedOrderQuantity(String username, String password, String plannedOrder,
+                                           BigDecimal totalQuantity) {
         Base64 base64 = new Base64();
         CloseableHttpClient httpClient = null;
 
@@ -601,8 +602,7 @@ public class PlannedOrderServiceImpl implements PlannedOrderService {
             httpClient = (CloseableHttpClient) HttpClientAccessor.getHttpClient(destination);
 
             // Update planned order with new production version and total quantity
-            updatePlannedOrderFields(plannedOrder, httpClient, decodedUsername, decodedPassword,
-                    productionVersion, totalQuantity);
+            updatePlannedOrderQuantityField(plannedOrder, httpClient, decodedUsername, decodedPassword, totalQuantity);
 
             logger.info("Planned order {} successfully updated", plannedOrder);
 
@@ -620,12 +620,145 @@ public class PlannedOrderServiceImpl implements PlannedOrderService {
         }
     }
 
-    private void updatePlannedOrderFields(String plannedOrder,
+    @Override
+    public void updatePlannedOrderProductionVersion(String username, String password, String plannedOrder, String productionVersion) {
+        Base64 base64 = new Base64();
+        CloseableHttpClient httpClient = null;
+
+        try {
+            String decodedUsername = new String(base64.decode(username.getBytes()));
+            String decodedPassword = new String(base64.decode(password.getBytes()));
+
+            HttpDestination destination = DefaultDestination.builder()
+                    .property("Name", "mydestination")
+                    .property("URL", PLANNED_ORDER_URL) // Assuming you have this constant
+                    .property("Type", "HTTP")
+                    .property("Authentication", "BasicAuthentication")
+                    .property("User", decodedUsername)
+                    .property("Password", decodedPassword)
+                    .property("TrustAll", "true")
+                    .build().asHttp();
+
+            httpClient = (CloseableHttpClient) HttpClientAccessor.getHttpClient(destination);
+
+            // Update planned order with new production version and total quantity
+            updatePlannedOrderProductionVersionField(plannedOrder, httpClient, decodedUsername, decodedPassword,
+                    productionVersion);
+
+            logger.info("Planned order {} successfully updated", plannedOrder);
+
+        } catch (Exception e) {
+            logger.error("Error in updatePlannedOrder: ", e);
+            throw new RuntimeException("Error updating planned order: " + e.getMessage(), e);
+        } finally {
+            if (httpClient != null) {
+                try {
+                    //httpClient.close();
+                } catch (Exception e) {
+                    logger.warn("Error closing HTTP client", e);
+                }
+            }
+        }
+    }
+
+    private void updatePlannedOrderQuantityField(String plannedOrder,
                                           CloseableHttpClient httpClient,
                                           String decodedUsername,
                                           String decodedPassword,
-                                          String productionVersion,
                                           BigDecimal totalQuantity) {
+        try {
+            // First, read the planned order to get the ETag
+            String plannedOrderUrl = PLANNED_ORDER_URL + "/A_PlannedOrder('" + plannedOrder + "')" +
+                    "?sap-client=" + SAP_CLIENT;
+
+            HttpGet getRequest = new HttpGet(plannedOrderUrl);
+            getRequest.setHeader("Accept", "application/json");
+
+            Base64 base64 = new Base64();
+            String auth = decodedUsername + ":" + decodedPassword;
+            String encodedAuth = new String(base64.encode(auth.getBytes(StandardCharsets.UTF_8)));
+            getRequest.setHeader("Authorization", "Basic " + encodedAuth);
+
+            //Get etag
+            String etag = null;
+            try (CloseableHttpResponse getResponse = httpClient.execute(getRequest)) {
+                int statusCode = getResponse.getStatusLine().getStatusCode();
+
+                if (statusCode == 200) {
+                    String responseBody = EntityUtils.toString(getResponse.getEntity());
+                    JSONObject plannedOrderData = new JSONObject(responseBody);
+
+                    // Get ETag from metadata
+                    if (plannedOrderData.has("d")) {
+                        JSONObject data = plannedOrderData.getJSONObject("d");
+                        if (data.has("__metadata")) {
+                            JSONObject metadata = data.getJSONObject("__metadata");
+                            if (metadata.has("etag")) {
+                                etag = metadata.getString("etag");
+                            }
+                        }
+                    }
+
+                    logger.info("Successfully read planned order {}, ETag: {}", plannedOrder, etag);
+                } else {
+                    logger.error("Failed to read planned order {}. Status: {}", plannedOrder, statusCode);
+                    throw new RuntimeException("Failed to read planned order: HTTP " + statusCode);
+                }
+            }
+
+            // Now perform the PATCH operation to update the fields
+            String csrfToken = fetchCSRFToken(httpClient, decodedUsername, decodedPassword);
+
+            String patchUrl = PLANNED_ORDER_URL + "/A_PlannedOrder('" + plannedOrder + "')" +
+                    "?sap-client=" + SAP_CLIENT;
+
+            HttpPatch patchRequest = new HttpPatch(patchUrl);
+            patchRequest.setHeader("Content-Type", "application/json");
+            patchRequest.setHeader("Accept", "application/json");
+            patchRequest.setHeader("X-CSRF-Token", csrfToken);
+            patchRequest.setHeader("Authorization", "Basic " + encodedAuth);
+
+            // CRITICAL: Add If-Match header with ETag from read operation
+            if (etag != null && !etag.isEmpty()) {
+                patchRequest.setHeader("If-Match", etag);
+            } else {
+                patchRequest.setHeader("If-Match", "*");
+            }
+
+            // Build the JSON payload with fields to update
+            JSONObject updatePayload = new JSONObject();
+
+            if (totalQuantity != null) {
+                updatePayload.put("TotalQuantity", totalQuantity.toString());
+            }
+
+            StringEntity entity = new StringEntity(updatePayload.toString(), ContentType.APPLICATION_JSON);
+            patchRequest.setEntity(entity);
+
+            try (CloseableHttpResponse patchResponse = httpClient.execute(patchRequest)) {
+                int statusCode = patchResponse.getStatusLine().getStatusCode();
+
+                if (statusCode == 204) {
+                    logger.info("Planned order {} successfully updated - Status 204 No Content", plannedOrder);
+                } else {
+                    String responseBody = EntityUtils.toString(patchResponse.getEntity());
+                    logger.error("Failed to update planned order {}. Status: {}, Response: {}",
+                            plannedOrder, statusCode, responseBody);
+                    throw new RuntimeException("Failed to update planned order: HTTP " + statusCode);
+                }
+            }
+
+        } catch (Exception e) {
+            logger.error("Error updating planned order fields: ", e);
+            throw new RuntimeException("Error updating planned order fields: " + e.getMessage(), e);
+        }
+    }
+
+    private void updatePlannedOrderProductionVersionField(String plannedOrder,
+                                                 CloseableHttpClient httpClient,
+                                                 String decodedUsername,
+                                                 String decodedPassword,
+                                                 String productionVersion) {
         try {
             // First, read the planned order to get the ETag
             String plannedOrderUrl = PLANNED_ORDER_URL + "/A_PlannedOrder('" + plannedOrder + "')" +
@@ -692,17 +825,8 @@ public class PlannedOrderServiceImpl implements PlannedOrderService {
                 updatePayload.put("ProductionVersion", productionVersion);
             }
 
-            if (totalQuantity != null) {
-                updatePayload.put("TotalQuantity", totalQuantity.toString());
-            }
-
             StringEntity entity = new StringEntity(updatePayload.toString(), ContentType.APPLICATION_JSON);
             patchRequest.setEntity(entity);
-
-            logger.info("Updating planned order {} with ProductionVersion: {}, TotalQuantity: {}",
-                    plannedOrder, productionVersion, totalQuantity);
-            logger.debug("Using ETag: {}", etag);
-            logger.debug("Patch payload: {}", updatePayload.toString());
 
             try (CloseableHttpResponse patchResponse = httpClient.execute(patchRequest)) {
                 int statusCode = patchResponse.getStatusLine().getStatusCode();

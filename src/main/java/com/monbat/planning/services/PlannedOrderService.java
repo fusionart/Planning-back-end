@@ -25,6 +25,8 @@ public interface PlannedOrderService {
     void deallocatePlannedOrder(String username, String password, String plannedOrder,
                               LocalDateTime opLtstSchedldProcgStrtDteTme);
 
-    void updatePlannedOrder(String username, String password, String plannedOrder,
-                            String productionVersion, BigDecimal totalQuantity);
+    void updatePlannedOrderQuantity(String username, String password, String plannedOrder, BigDecimal totalQuantity);
+
+    void updatePlannedOrderProductionVersion(String username, String password, String plannedOrder,
+                                             String productionVersion);
 }
